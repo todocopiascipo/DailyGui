@@ -1,0 +1,99 @@
+/* Reset mínimo, acotado al módulo (reemplaza al preflight global de Tailwind). */
+.co-app,
+.co-app *,
+.co-app *::before,
+.co-app *::after {
+  box-sizing: border-box;
+}
+
+.co-app :where(h1, h2, h3, h4, p, ul, ol, figure) {
+  margin: 0;
+}
+
+.co-app :where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+.co-app :focus-visible {
+  outline: var(--co-focus-ring) solid var(--co-blanco);
+  outline-offset: 2px;
+}
+
+.co-app {
+  position: relative;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  font-family: var(--co-font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--co-blanco);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Fondo: degradado profundo de azul-profundo a azul-principal, con un brillo
+ * celeste difuminado. El brillo queda en los bordes para que la zona más clara
+ * no caiga detrás del texto.
+ */
+.co-fondo {
+  background-color: var(--co-azul-profundo);
+  background-image:
+    radial-gradient(
+      ellipse 55% 45% at 100% 0%,
+      color-mix(in oklab, var(--co-brillo) 45%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 0% 100%,
+      color-mix(in oklab, var(--co-azul-principal) 70%, transparent),
+      transparent 75%
+    ),
+    linear-gradient(135deg, var(--co-azul-profundo) 0%, var(--co-azul-principal) 100%);
+}
+
+/* Jerarquía tipográfica (sección 9.2). */
+.co-titulo-principal {
+  font-size: 48px;
+  line-height: 56px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.co-titulo {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+}
+.co-subtitulo {
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 600;
+}
+.co-texto-chico {
+  font-size: 14px;
+  line-height: 20px;
+}
+.co-dato-clave {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+}
+.co-etiqueta {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-app *,
+  .co-app *::before,
+  .co-app *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

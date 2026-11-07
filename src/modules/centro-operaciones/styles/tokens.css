@@ -1,0 +1,26 @@
+/*
+ * Tokens del sistema de diseño TODOCOPIAS (especificación, sección 9.2).
+ * Prefijados con `co-` y acotados a `.co-app` para no chocar con la suite.
+ */
+.co-app {
+  --co-azul-principal: #174e97;
+  --co-azul-profundo: #2c2a69;
+  --co-blanco: #ffffff;
+  --co-negro: #171717;
+  --co-gradiente-marca: linear-gradient(90deg, #174e97, #2c2a69);
+
+  /* Brillo del fondo: celeste derivado del azul principal (decisión abierta 6). */
+  --co-brillo: #4f8fd9;
+
+  --co-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --co-space-1: 8px;
+  --co-space-2: 16px;
+  --co-space-3: 24px;
+  --co-space-4: 32px;
+  --co-space-6: 48px;
+  --co-space-8: 64px;
+
+  --co-radius-pill: 999px;
+  --co-focus-ring: 2px;
+}

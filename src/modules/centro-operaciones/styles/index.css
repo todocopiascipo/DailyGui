@@ -1,0 +1,35 @@
+/*
+ * Estilos del módulo. Tailwind se carga SIN preflight (reset global) y con
+ * prefijo `co`: las utilidades se escriben `co:flex`, `co:text-white`, etc.
+ * y las variables que genera Tailwind empiezan con `--co-`.
+ */
+@import 'tailwindcss/theme.css' layer(theme) prefix(co);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(co);
+
+@import '@fontsource/plus-jakarta-sans/latin-400.css';
+@import '@fontsource/plus-jakarta-sans/latin-500.css';
+@import '@fontsource/plus-jakarta-sans/latin-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-800.css';
+
+@import './tokens.css';
+@import './base.css';
+
+/*
+ * Conecta los tokens de marca con las utilidades de Tailwind.
+ * Ojo: con el prefijo, Tailwind emite estas claves como `--co-<clave>`, así que
+ * no pueden llamarse igual que los tokens de tokens.css (se referenciarían a sí mismas).
+ */
+@theme inline {
+  --color-azul-principal: var(--co-azul-principal);
+  --color-azul-profundo: var(--co-azul-profundo);
+  --color-blanco: var(--co-blanco);
+  --color-negro: var(--co-negro);
+  --radius-capsula: var(--co-radius-pill);
+  --spacing: 4px;
+}
+
+/* Tailwind emite `--co-font-sans` en :root; le damos el mismo valor que el token de marca. */
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+}

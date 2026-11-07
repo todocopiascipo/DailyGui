@@ -1,0 +1,11 @@
+/* Solo para la app independiente: el módulo no depende de estos estilos. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #2c2a69;
+}
