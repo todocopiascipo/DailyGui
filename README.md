@@ -21,15 +21,14 @@ dedicado. `.env.local` nunca se sube al repositorio.
 
 ## Comandos
 
-| Comando            | Qué hace                                                 |
-| ------------------ | -------------------------------------------------------- |
-| `npm run dev`      | Servidor local en http://localhost:5173                  |
-| `npm run build`    | Chequeo de tipos + build de producción en `dist/`        |
-| `npm test`         | Pruebas unitarias y de componentes (Vitest)              |
-| `npm run test:e2e` | Pruebas de punta a punta (Playwright, escritorio + iPad) |
-| `npm run lint`     | ESLint                                                   |
-| `npm run format`   | Prettier                                                 |
-
+| Comando                    | Qué hace                                                      |
+| -------------------------- | ------------------------------------------------------------- |
+| `npm run dev`              | Servidor local en http://localhost:5173                       |
+| `npm run build`            | Chequeo de tipos + build de producción en `dist/`             |
+| `npm test`                 | Pruebas unitarias y de componentes (Vitest)                   |
+| `npm run test:e2e`         | Pruebas de punta a punta (Playwright, escritorio + iPad)      |
+| `npm run lint`             | ESLint                                                        |
+| `npm run format`           | Prettier                                                      |
 | `npm run verificar:acceso` | Comprueba que sin sesión la API no deja leer ni escribir nada |
 
 ## Base de datos (Supabase)
