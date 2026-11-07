@@ -1,8 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { lazy, Suspense, useState } from 'react'
-import { CuentaNoHabilitada, Ingreso } from '../features/acceso/Ingreso'
-import { useSesion } from '../features/acceso/useSesion'
-import { useConfigMatriz, useTareasMatriz } from '../features/matriz/datos'
+import { useMatriz } from '../features/matriz/datos'
 import { Matriz } from '../features/matriz/Matriz'
 import { useAhora } from '../features/matriz/useAhora'
 
@@ -29,33 +27,24 @@ export function Raiz() {
             <PantallaDemo />
           </Suspense>
         ) : (
-          <PantallaConSesion />
+          <PantallaPrincipal />
         )}
       </QueryClientProvider>
     </div>
   )
 }
 
-function PantallaConSesion() {
-  const sesion = useSesion()
-  if (sesion === undefined) return null
-  if (sesion === null) return <Ingreso />
-  return <PantallaPrincipal />
-}
-
 function PantallaPrincipal() {
   const ahora = useAhora()
-  const config = useConfigMatriz(true)
-  const tareas = useTareasMatriz(true)
+  const matriz = useMatriz()
 
-  if (config.isPending || tareas.isPending) return null
-  if (config.isError || tareas.isError) {
+  if (matriz.isPending) return null
+  if (matriz.isError) {
     return (
       <p role="alert" className="co-mensaje-central">
-        No se pudieron cargar los datos. Se vuelve a intentar al recuperar la conexión.
+        No se pudo conectar con el servidor del local. Revisá que esté encendido.
       </p>
     )
   }
-  if (config.data === null) return <CuentaNoHabilitada />
-  return <Matriz tareas={tareas.data} config={config.data} ahora={ahora} />
+  return <Matriz tareas={matriz.data.tareas} config={matriz.data.config} ahora={ahora} />
 }

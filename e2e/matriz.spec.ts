@@ -44,7 +44,9 @@ test.describe('matriz', () => {
   })
 
   test('ampliar un cuadrante y volver con Esc', async ({ page }) => {
-    await cuadrante(page, 'hacer').getByRole('button', { name: /^Urgente e importante/ }).click()
+    await cuadrante(page, 'hacer')
+      .getByRole('button', { name: /^Urgente e importante/ })
+      .click()
     await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Volver' })).toHaveCount(0)
@@ -78,7 +80,13 @@ test('en celular se ve como lista agrupada', async ({ browser }) => {
   await contexto.close()
 })
 
-test('sin sesión pide ingresar', async ({ page }) => {
+test('conectada al servidor local: sin tareas muestra los cuatro cuadrantes vacíos', async ({
+  page,
+}) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Ingresar' })).toBeVisible()
+  await expect(page.getByTestId('co-matriz')).toBeVisible()
+  for (const id of ['hacer', 'planificar', 'delegar', 'eliminar']) {
+    await expect(cuadrante(page, id)).toBeVisible()
+  }
+  await expect(page.getByTestId('co-globo')).toHaveCount(0)
 })
