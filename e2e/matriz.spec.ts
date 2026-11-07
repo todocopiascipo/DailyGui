@@ -44,7 +44,7 @@ test.describe('matriz', () => {
   })
 
   test('ampliar un cuadrante y volver con Esc', async ({ page }) => {
-    await cuadrante(page, 'hacer').getByRole('button', { name: /Hacer/ }).click()
+    await cuadrante(page, 'hacer').getByRole('button', { name: /^Urgente e importante/ }).click()
     await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Volver' })).toHaveCount(0)
@@ -52,7 +52,7 @@ test.describe('matriz', () => {
 
   test('con muchas tareas achica los globos y muestra "+N"', async ({ page }) => {
     await page.goto('/?demo=muchas')
-    const mas = page.getByRole('button', { name: /tareas más en Hacer/ })
+    const mas = page.getByRole('button', { name: /tareas más en Urgente e importante/ })
     await expect(mas).toBeVisible()
     await mas.click()
     await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()

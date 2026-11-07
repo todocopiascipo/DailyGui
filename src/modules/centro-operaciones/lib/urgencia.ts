@@ -51,11 +51,12 @@ export function cuadranteDe(importante: boolean, urgente: boolean): Cuadrante {
   return urgente ? 'delegar' : 'eliminar'
 }
 
+/** Títulos visibles: describen la combinación de urgencia e importancia. */
 export const NOMBRES_CUADRANTE: Record<Cuadrante, string> = {
-  hacer: 'Hacer',
-  planificar: 'Planificar',
-  delegar: 'Delegar',
-  eliminar: 'Eliminar',
+  hacer: 'Urgente e importante',
+  planificar: 'No urgente e importante',
+  delegar: 'Urgente y no importante',
+  eliminar: 'No urgente y no importante',
 }
 
 /** Posición de cada cuadrante en pantalla (configuracion.disposicion_cuadrantes). */
