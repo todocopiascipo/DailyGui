@@ -9,10 +9,6 @@ const A = { id: 'demo-a', nombre: 'Persona A', iniciales: 'PA' }
 const B = { id: 'demo-b', nombre: 'Persona B', iniciales: 'PB' }
 const C = { id: 'demo-c', nombre: 'Persona C', iniciales: 'PC' }
 
-export function esModoDemo(): boolean {
-  return import.meta.env.DEV && new URLSearchParams(window.location.search).has('demo')
-}
-
 /** Fecha a `horas` de ahora (negativo = en el pasado), en formato ISO. */
 function horasDesde(ahora: Date, horas: number): string {
   return new Date(ahora.getTime() + horas * 3_600_000).toISOString()
