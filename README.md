@@ -30,6 +30,26 @@ dedicado. `.env.local` nunca se sube al repositorio.
 | `npm run lint`     | ESLint                                                   |
 | `npm run format`   | Prettier                                                 |
 
+| `npm run verificar:acceso` | Comprueba que sin sesión la API no deja leer ni escribir nada |
+
+## Base de datos (Supabase)
+
+Proyecto dedicado `todocopias-operaciones`, región `sa-east-1` (São Paulo).
+
+- El esquema se crea **solo** con las migraciones de `supabase/migrations/`
+  (nunca cambios a mano en el panel). La semilla está en `supabase/seed.sql`.
+- Después de cada migración, regenerar
+  `src/modules/centro-operaciones/lib/database.types.ts`.
+- **Acceso:** solo la cuenta compartida del local, registrada en
+  `privado.cuentas_local`. Sin sesión (o con otra cuenta) no se ve nada.
+- **Historial:** lo escriben automáticamente los triggers. El frontend manda la
+  persona activa en el encabezado HTTP `x-persona-id` y, opcionalmente,
+  `x-co-accion` (`movida_cuadrante` o `devuelta`).
+- **Reglas automáticas en la base:** `estado_anterior`, `terminada_at`,
+  `entregada_at`, autoría (`creada_por`, `actualizada_por`, `eliminada_por`) y
+  el responsable de una subtarea se suma a los de la tarea.
+- El hash del PIN vive en `privado.personas_pin`, fuera del alcance de la API.
+
 ## Estructura
 
 Todo el código del módulo vive en `src/modules/centro-operaciones/`, pensado para
