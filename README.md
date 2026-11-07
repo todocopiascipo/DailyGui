@@ -25,6 +25,14 @@ Levanta el servidor de datos y la app. En esta PC: http://localhost:5173.
 Desde el iPad o el monitor: la dirección "Network" que aparece en la consola
 (por ejemplo `http://192.168.0.208:5173`), dentro de la red del local.
 
+En la matriz:
+
+- **Crear una tarea:** tecla `N` (en la PC) o el botón `+` casi transparente
+  abajo al centro (en el celular, abajo a la derecha).
+- **Ver y editar una tarea:** tocar su globo. Las subtareas se guardan al
+  momento; el resto, con "Guardar cambios".
+- Las personas del equipo se agregan con "+ Persona" dentro del formulario.
+
 Con datos de demostración (solo en desarrollo, no se guardan):
 http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
 
@@ -37,6 +45,11 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   (`estado_anterior`, `terminada_at`, `entregada_at`, autoría, responsables de
   subtareas). La persona activa viaja en el encabezado `x-persona-id`.
 - Configuración opcional en `.env.local` (ver `.env.example`).
+- API (`server/app.ts`): `GET /api/matriz`, `GET /api/catalogos`,
+  `GET /api/clientes?telefono=`, `POST /api/personas`, `POST /api/tareas`,
+  `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
+  `PATCH|DELETE /api/subtareas/:id`. Todo lo que llega se valida en
+  `server/validar.ts`.
 
 ## Comandos
 

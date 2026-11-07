@@ -45,9 +45,11 @@ interface Props {
   aspecto: Aspecto
   ahora: Date
   densidad: Densidad
+  /** Tocar el globo abre el detalle. */
+  onAbrir?: (id: string) => void
 }
 
-export function Globo({ tarea, aspecto, ahora, densidad }: Props) {
+export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
   const linea = lineaEstado(tarea, aspecto, ahora)
   const { total, hechas } = tarea.subtareas
   const tamIcono = densidad === 'mini' ? 12 : 14
@@ -87,6 +89,15 @@ export function Globo({ tarea, aspecto, ahora, densidad }: Props) {
         )}
       </p>
       {linea && <p className="co-globo__meta co-globo__entrega">{linea}</p>}
+      {onAbrir && (
+        // Cubre todo el globo: el área táctil es la tarjeta entera.
+        <button
+          type="button"
+          className="co-globo__abrir"
+          aria-label={`Abrir ${tarea.titulo}`}
+          onClick={() => onAbrir(tarea.id)}
+        />
+      )}
     </article>
   )
 }

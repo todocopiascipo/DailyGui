@@ -22,6 +22,7 @@ interface Props {
   style?: React.CSSProperties
   onAmpliar: () => void
   onVolver: () => void
+  onAbrir?: (id: string) => void
 }
 
 export function Cuadrante({
@@ -33,6 +34,7 @@ export function Cuadrante({
   style,
   onAmpliar,
   onVolver,
+  onAbrir,
 }: Props) {
   const cuerpo = useRef<HTMLDivElement>(null)
   const midiendo = vista === 'general' || vista === 'ampliado'
@@ -110,6 +112,7 @@ export function Cuadrante({
               aspecto={aspecto}
               ahora={ahora}
               densidad={densidad}
+              onAbrir={onAbrir}
             />
           ))}
           {ocultos > 0 && (

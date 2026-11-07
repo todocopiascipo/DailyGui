@@ -15,6 +15,7 @@
 @import './tokens.css';
 @import './base.css';
 @import './matriz.css';
+@import './formularios.css';
 
 /*
  * Conecta los tokens de marca con las utilidades de Tailwind.

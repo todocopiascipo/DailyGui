@@ -21,9 +21,10 @@ interface Props {
   tareas: TareaMatriz[]
   config: ConfigMatriz
   ahora: Date
+  onAbrir?: (id: string) => void
 }
 
-export function Matriz({ tareas, config, ahora }: Props) {
+export function Matriz({ tareas, config, ahora, onAbrir }: Props) {
   const angosto = useEsAngosto()
   const [ampliado, setAmpliado] = useState<IdCuadrante | null>(null)
   const grupos = useMemo(() => agruparPorCuadrante(tareas, config, ahora), [tareas, config, ahora])
@@ -68,6 +69,7 @@ export function Matriz({ tareas, config, ahora }: Props) {
             vista="lista"
             onAmpliar={() => {}}
             onVolver={() => {}}
+            onAbrir={onAbrir}
           />
         ))}
       </div>
@@ -98,6 +100,7 @@ export function Matriz({ tareas, config, ahora }: Props) {
             }}
             onAmpliar={() => setAmpliado(id)}
             onVolver={() => setAmpliado(null)}
+            onAbrir={onAbrir}
           />
         )
       })}

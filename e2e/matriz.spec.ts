@@ -80,13 +80,11 @@ test('en celular se ve como lista agrupada', async ({ browser }) => {
   await contexto.close()
 })
 
-test('conectada al servidor local: sin tareas muestra los cuatro cuadrantes vacíos', async ({
-  page,
-}) => {
+test('conectada al servidor local: muestra los cuatro cuadrantes', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
   for (const id of ['hacer', 'planificar', 'delegar', 'eliminar']) {
     await expect(cuadrante(page, id)).toBeVisible()
   }
-  await expect(page.getByTestId('co-globo')).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
 })

@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { lazy, Suspense, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useMatriz } from '../features/matriz/datos'
 import { Matriz } from '../features/matriz/Matriz'
 import { useAhora } from '../features/matriz/useAhora'
+import { CreacionRapida } from '../features/tarea/CreacionRapida'
+import { DetalleTarea } from '../features/tarea/DetalleTarea'
 
 // Datos de demostración: solo existen en desarrollo y no entran en el build final.
 const PantallaDemo = import.meta.env.DEV
@@ -34,9 +37,31 @@ export function Raiz() {
   )
 }
 
+/** No interceptar atajos mientras se escribe. */
+function escribiendo(destino: EventTarget | null): boolean {
+  if (!(destino instanceof HTMLElement)) return false
+  return destino.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName)
+}
+
 function PantallaPrincipal() {
   const ahora = useAhora()
   const matriz = useMatriz()
+  const [creando, setCreando] = useState(false)
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const hayVentana = creando || abierta !== null
+
+  // Tecla N: creación rápida (especificación 7.5).
+  useEffect(() => {
+    if (hayVentana) return
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey) return
+      if (escribiendo(e.target)) return
+      e.preventDefault()
+      setCreando(true)
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [hayVentana])
 
   if (matriz.isPending) return null
   if (matriz.isError) {
@@ -46,5 +71,32 @@ function PantallaPrincipal() {
       </p>
     )
   }
-  return <Matriz tareas={matriz.data.tareas} config={matriz.data.config} ahora={ahora} />
+  return (
+    <>
+      <Matriz
+        tareas={matriz.data.tareas}
+        config={matriz.data.config}
+        ahora={ahora}
+        onAbrir={setAbierta}
+      />
+      <button
+        type="button"
+        className="co-boton-crear"
+        aria-label="Crear tarea"
+        title="Crear tarea (N)"
+        onClick={() => setCreando(true)}
+      >
+        <Plus size={22} aria-hidden strokeWidth={2} />
+      </button>
+      {creando && <CreacionRapida ahora={ahora} onCerrar={() => setCreando(false)} />}
+      {abierta && (
+        <DetalleTarea
+          id={abierta}
+          ahora={ahora}
+          umbrales={matriz.data.config.umbrales}
+          onCerrar={() => setAbierta(null)}
+        />
+      )}
+    </>
+  )
 }
