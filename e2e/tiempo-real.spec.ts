@@ -23,7 +23,10 @@ test('dos navegadores se sincronizan en menos de 1 segundo', async ({ browser })
   const titulo = unico('Sincro')
   await pa.keyboard.press('n')
   await pa.getByLabel('Título').fill(titulo)
-  await pa.getByRole('radio', { name: 'Sí' }).click()
+  await pa
+    .getByRole('radiogroup', { name: 'Importante' })
+    .getByRole('radio', { name: 'Sí' })
+    .click()
   await pa.getByRole('dialog').getByRole('button', { name: 'Crear tarea' }).click()
   await expect(globo(pb, titulo)).toBeVisible({ timeout: 1_000 })
 
@@ -80,7 +83,10 @@ test('alta optimista: se ve al instante y, si el servidor la rechaza, vuelve atr
   const titulo = unico('Optimista')
   await page.keyboard.press('n')
   await page.getByLabel('Título').fill(titulo)
-  await page.getByRole('radio', { name: 'No' }).click()
+  await page
+    .getByRole('radiogroup', { name: 'Importante' })
+    .getByRole('radio', { name: 'No' })
+    .click()
   await page.getByRole('dialog').getByRole('button', { name: 'Crear tarea' }).click()
 
   // Al instante: la tarea en su cuadrante, marcada como "guardando".

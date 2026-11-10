@@ -4,6 +4,7 @@ import {
   cuadranteDe,
   esUrgente,
   movimiento,
+  urgenciaElegida,
   UMBRALES_POR_DEFECTO,
   urgenciaEfectiva,
   urgenciaEstimada,
@@ -155,5 +156,15 @@ describe('movimiento entre cuadrantes', () => {
       importante: false,
       urgencia_manual: 1,
     })
+  })
+})
+
+describe('urgente elegido en el formulario', () => {
+  const ahora = new Date('2026-11-06T10:00:00-03:00')
+  it('por fecha deja la automática; sí / no la fijan', () => {
+    expect(urgenciaElegida(null, null, ahora)).toBeNull()
+    expect(urgenciaElegida(true, null, ahora)).toBe(3)
+    expect(urgenciaElegida(false, new Date('2026-11-06T11:00:00-03:00'), ahora)).toBe(2)
+    expect(urgenciaElegida(true, new Date('2026-11-06T11:00:00-03:00'), ahora)).toBe(5)
   })
 })

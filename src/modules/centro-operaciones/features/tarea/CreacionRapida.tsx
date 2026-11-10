@@ -1,10 +1,15 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId, useState } from 'react'
+import { aIso } from '../../lib/fechas'
 import { nuevoId } from '../../lib/ids'
 import { useConectado } from '../../lib/tiempoReal'
+import { esUrgente, urgenciaEstimada } from '../../lib/urgencia'
+import { useMatriz } from '../matriz/datos'
 import type { TareaMatriz } from '../matriz/tipos'
+import { AvisoSinConexion } from './AvisoSinConexion'
 import {
   borradorVacio,
+  conUrgenciaElegida,
   cuerpoNuevaTarea,
   tareaProvisoria,
   validar,
@@ -12,19 +17,11 @@ import {
   type Errores,
   type SubtareaNueva,
 } from './borrador'
-import { AvisoSinConexion } from './AvisoSinConexion'
-import {
-  Campo,
-  CampoFechaHora,
-  CampoPago,
-  CamposCliente,
-  ElegirResponsables,
-  Segmentado,
-  SiNo,
-} from './controles'
+import { Campo, CampoFechaHora, ElegirResponsables, ElegirUrgente, SiNo } from './controles'
 import { useCatalogos } from './datos'
 import { Dialogo } from './Dialogo'
 import { SelectorCategoria } from './SelectorCategoria'
+import { SelectorPedido } from './SelectorPedido'
 
 /** Lo cargado en el formulario (para reabrirlo si el servidor rechaza el alta). */
 export interface EstadoCreacion {
@@ -49,26 +46,36 @@ interface Props {
   error?: string
 }
 
+/** Tarea nueva desde "+": siempre interna (los pedidos se cargan con la OT). */
+const tareaVacia = (): Borrador => ({ ...borradorVacio(), tipo: 'interna' })
+
 /**
- * Creación rápida (especificación 7.5): título, responsables, entrega e
- * importancia en un paso; el resto en "Más datos", plegado.
+ * Tarea interna ("+", especificación 7.5): lo esencial en un paso (título,
+ * responsables, entrega, importante y urgente), su categoría y, si es para
+ * un pedido, la orden de trabajo ya cargada. El resto, en "Más datos".
  */
 export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: Props) {
   const idForm = useId()
   const catalogos = useCatalogos()
+  const umbrales = useMatriz().data?.config.umbrales
   const conectado = useConectado()
-  const [b, setB] = useState<Borrador>(() => inicial?.b ?? borradorVacio())
+  const [vacia] = useState(tareaVacia)
+  const [b, setB] = useState<Borrador>(() => inicial?.b ?? vacia)
   const [subtareas, setSubtareas] = useState<SubtareaNueva[]>(() => inicial?.subtareas ?? [])
   const [mas, setMas] = useState(() => (inicial?.subtareas.length ?? 0) > 0)
   const [errores, setErrores] = useState<Errores>({})
 
   const cambiar = <K extends keyof Borrador>(k: K, v: Borrador[K]) => {
     setB((x) => ({ ...x, [k]: v }))
-    setErrores((e) => ({ ...e, [k === 'cliente' ? 'cliente' : k]: undefined }))
+    setErrores((e) => ({ ...e, [k]: undefined }))
   }
 
   const personas = catalogos.data?.personas ?? []
-  const sinGuardar = JSON.stringify(b) !== JSON.stringify(borradorVacio()) || subtareas.length > 0
+  const sinGuardar = JSON.stringify(b) !== JSON.stringify(vacia) || subtareas.length > 0
+  const entregaIso = aIso(b.entrega)
+  const urgenteSegunFecha = esUrgente(
+    urgenciaEstimada(entregaIso ? new Date(entregaIso) : null, ahora, umbrales),
+  )
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,14 +84,15 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
     setErrores(err)
     if (Object.keys(err).length > 0) {
       // Si el error está en "Más datos", desplegarlo.
-      if (err.cliente || err.sena || err.saldo || err.inicio) setMas(true)
+      if (err.inicio) setMas(true)
       return
     }
+    const listo = conUrgenciaElegida(b, ahora, umbrales)
     const id = nuevoId()
     onGuardar(
       {
-        cuerpo: cuerpoNuevaTarea(b, subtareas, id),
-        provisoria: tareaProvisoria(id, b, subtareas, personas),
+        cuerpo: cuerpoNuevaTarea(listo, subtareas, id),
+        provisoria: tareaProvisoria(id, listo, subtareas, personas),
       },
       { b, subtareas },
     )
@@ -141,11 +149,28 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
           error={errores.entrega}
         />
 
-        <SiNo
-          valor={b.importante}
-          onCambiar={(v) => cambiar('importante', v)}
-          error={errores.importante}
-        />
+        <div className="co-fila co-fila--campos">
+          <SiNo
+            valor={b.importante}
+            onCambiar={(v) => cambiar('importante', v)}
+            error={errores.importante}
+          />
+          <ElegirUrgente
+            valor={b.urgente}
+            onCambiar={(v) => cambiar('urgente', v)}
+            urgenteSegunFecha={urgenteSegunFecha}
+          />
+        </div>
+
+        <div className="co-fila co-fila--campos">
+          <SelectorCategoria
+            categorias={catalogos.data?.categorias ?? []}
+            tipo="interna"
+            valor={b.categoria_id}
+            onCambiar={(v) => cambiar('categoria_id', v)}
+          />
+          <SelectorPedido valor={b.pedido_id} onCambiar={(v) => cambiar('pedido_id', v)} />
+        </div>
 
         <button
           type="button"
@@ -159,55 +184,6 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
 
         {mas && (
           <div className="co-formulario co-formulario--anidado">
-            <Campo etiqueta="Tipo" como="fieldset">
-              {() => (
-                <Segmentado
-                  etiqueta="Tipo"
-                  valor={b.tipo}
-                  onCambiar={(v) => cambiar('tipo', v)}
-                  opciones={[
-                    { valor: 'pedido', texto: 'Pedido' },
-                    { valor: 'interna', texto: 'Tarea interna' },
-                  ]}
-                />
-              )}
-            </Campo>
-
-            {b.tipo === 'pedido' && (
-              <>
-                <CamposCliente
-                  valor={b.cliente}
-                  onCambiar={(v) => cambiar('cliente', v)}
-                  error={errores.cliente}
-                />
-                <div className="co-fila co-fila--campos">
-                  <CampoPago
-                    etiqueta="Seña"
-                    valor={b.sena}
-                    medio={b.sena_medio}
-                    onCambiar={(v) => cambiar('sena', v)}
-                    onCambiarMedio={(m) => cambiar('sena_medio', m)}
-                    error={errores.sena}
-                  />
-                  <CampoPago
-                    etiqueta="Saldo (lo que deben)"
-                    valor={b.saldo}
-                    medio={b.saldo_medio}
-                    onCambiar={(v) => cambiar('saldo', v)}
-                    onCambiarMedio={(m) => cambiar('saldo_medio', m)}
-                    error={errores.saldo}
-                  />
-                </div>
-              </>
-            )}
-
-            <SelectorCategoria
-              categorias={catalogos.data?.categorias ?? []}
-              tipo={b.tipo}
-              valor={b.categoria_id}
-              onCambiar={(v) => cambiar('categoria_id', v)}
-            />
-
             <Campo etiqueta="Descripción">
               {({ id }) => (
                 <textarea

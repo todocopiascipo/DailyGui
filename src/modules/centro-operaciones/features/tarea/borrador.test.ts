@@ -24,6 +24,7 @@ const detalle: DetalleTarea = {
     descripcion: null,
     categoria_id: null,
     proyecto_id: null,
+    pedido_id: null,
     cliente_id: 'c1',
     sena: 1500,
     saldo: 0,

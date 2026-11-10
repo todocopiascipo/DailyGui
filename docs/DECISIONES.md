@@ -31,6 +31,10 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-10 | PIN opcional | De 4 a 8 números; se guarda solo como hash con sal (scrypt), nunca el PIN. Cada persona lo pone, cambia o quita desde "¿Quién soy?" (cambiar o quitar exige el actual). Mientras la app sea local, el PIN evita confusiones entre compañeros; no es una protección fuerte (la seguridad real llega con la cuenta del local al migrar a Supabase). |
 | 2026-11-10 | Resaltado | Al elegirse, sus tareas quedan marcadas y las demás atenuadas; el botón del ojo lo apaga y prende (se recuerda por dispositivo). |
 | 2026-11-10 | "Mis tareas" | Ahora / Sigue (entrega más cercana), línea del día (lo de hoy y lo vencido, de la hora de inicio a la de entrega) y paso a paso con checklist: todos los pasos de cada tarea, con quién hace cada uno ("Vos" en los propios). Sin pasos pendientes, ofrece Terminar. |
+| 2026-11-10 | Urgente al crear | Pedido del usuario: "+" y la OT tienen "Urgente: Sí / No / Por fecha" junto a "Importante". "Por fecha" (por defecto) deja la urgencia automática según la entrega; Sí y No la fijan con la misma regla que al arrastrar (sí → al menos 3; no → como mucho 2). En el detalle sigue el slider de 1 a 5. |
+| 2026-11-10 | "+" = tareas internas | Pedido del usuario: el "+" crea siempre tareas internas, con un formulario simple (título, responsables, entrega, importante, urgente, categoría interna y "Pedido relacionado"); descripción, hora de inicio y subtareas en "Más datos". Los pedidos se cargan con la OT. |
+| 2026-11-10 | Pedido relacionado | Una tarea interna puede enlazarse a una OT ya cargada (campo `pedido_id`, migración local `0003`; la de Supabase queda escrita sin aplicar). Se ve en el globo (icono de enlace y nombre del pedido) y en el detalle, con un botón para abrir el pedido. Solo internas y solo hacia pedidos. |
+| 2026-11-10 | Orden de la OT | Pedido del usuario: las fechas de inicio y límite van al final, después de Nombre. |
 
 ## Consecuencias del prototipo local
 

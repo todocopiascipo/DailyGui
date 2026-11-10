@@ -1,4 +1,4 @@
-import { Copy, Trash2 } from 'lucide-react'
+import { Copy, Link2, Trash2 } from 'lucide-react'
 import {
   accionesDisponibles,
   NOMBRES_ACCION,
@@ -28,6 +28,7 @@ import { useCatalogos, useDetalle, useEditarTarea } from './datos'
 import { Dialogo } from './Dialogo'
 import { describirEvento, momentoEvento, NOMBRES_ESTADO, NOMBRES_MOTIVO } from './historial'
 import { SelectorCategoria } from './SelectorCategoria'
+import { SelectorPedido } from './SelectorPedido'
 import { Subtareas } from './Subtareas'
 import type { DetalleTarea as Detalle } from './tipos'
 
@@ -38,10 +39,12 @@ interface Props {
   onCerrar: () => void
   /** Pide eliminar (con confirmación): la manda a la papelera. */
   onAccion?: EjecutarAccion
+  /** Abrir otra tarea (por ej., el pedido relacionado). */
+  onAbrirOtra?: (id: string) => void
 }
 
 /** Detalle de la tarea (especificación 7.4): consultar y modificar todo. */
-export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion }: Props) {
+export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion, onAbrirOtra }: Props) {
   const detalle = useDetalle(id)
   if (!detalle.data) {
     return (
@@ -63,6 +66,7 @@ export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion }: Props)
       umbrales={umbrales}
       onCerrar={onCerrar}
       onAccion={onAccion}
+      onAbrirOtra={onAbrirOtra}
     />
   )
 }
@@ -75,12 +79,14 @@ function Editor({
   umbrales,
   onCerrar,
   onAccion,
+  onAbrirOtra,
 }: {
   detalle: Detalle
   ahora: Date
   umbrales: Umbrales
   onCerrar: () => void
   onAccion?: EjecutarAccion
+  onAbrirOtra?: (id: string) => void
 }) {
   const idForm = useId()
   const catalogos = useCatalogos()
@@ -390,6 +396,24 @@ function Editor({
           valor={b.categoria_id}
           onCambiar={(v) => cambiar('categoria_id', v)}
         />
+        {b.tipo === 'interna' && (
+          <div className="co-grupo">
+            <SelectorPedido
+              valor={b.pedido_id}
+              onCambiar={(v) => cambiar('pedido_id', v)}
+              actual={detalle.pedido}
+            />
+            {detalle.pedido && onAbrirOtra && (
+              <button
+                type="button"
+                className="co-boton-sutil co-alinear-inicio"
+                onClick={() => onAbrirOtra(detalle.pedido!.id)}
+              >
+                <Link2 size={14} aria-hidden /> Abrir el pedido "{detalle.pedido.titulo}"
+              </button>
+            )}
+          </div>
+        )}
 
         <Campo etiqueta="Descripción">
           {({ id }) => (

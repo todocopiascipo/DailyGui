@@ -501,3 +501,43 @@ export function SliderUrgencia({
     </div>
   )
 }
+
+/**
+ * Urgente: Sí / No / Por fecha (especificación 6.1: la urgencia se estima por
+ * la entrega; elegir Sí o No la fija). `urgenteSegunFecha` es cómo quedaría
+ * hoy si se deja "Por fecha".
+ */
+export function ElegirUrgente({
+  valor,
+  onCambiar,
+  urgenteSegunFecha,
+}: {
+  valor: boolean | null
+  onCambiar: (v: boolean | null) => void
+  urgenteSegunFecha: boolean
+}) {
+  const opcion = valor === null ? 'fecha' : valor ? 'si' : 'no'
+  return (
+    <Campo etiqueta="Urgente" como="fieldset">
+      {() => (
+        <div className="co-grupo">
+          <Segmentado
+            etiqueta="Urgente"
+            valor={opcion}
+            onCambiar={(v) => onCambiar(v === 'fecha' ? null : v === 'si')}
+            opciones={[
+              { valor: 'si', texto: 'Sí' },
+              { valor: 'no', texto: 'No' },
+              { valor: 'fecha', texto: 'Por fecha' },
+            ]}
+          />
+          {valor === null && (
+            <p className="co-texto-suave">
+              Se calcula con la entrega: hoy {urgenteSegunFecha ? 'es urgente' : 'no es urgente'}.
+            </p>
+          )}
+        </div>
+      )}
+    </Campo>
+  )
+}

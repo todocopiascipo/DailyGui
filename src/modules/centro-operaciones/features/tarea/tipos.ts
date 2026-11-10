@@ -44,4 +44,6 @@ export interface DetalleTarea {
   cliente: Cliente | null
   creada_por: PersonaBreve | null
   eventos: EventoDetalle[]
+  /** Pedido relacionado (si es una tarea interna enlazada a una OT). */
+  pedido?: { id: string; titulo: string } | null
 }

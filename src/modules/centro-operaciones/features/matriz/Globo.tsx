@@ -1,4 +1,4 @@
-import { Check, FolderKanban, ListChecks, Pause, Skull } from 'lucide-react'
+import { Check, FolderKanban, Link2, ListChecks, Pause, Skull } from 'lucide-react'
 import type { Enums } from '../../lib/database.types'
 import { textoEntrega } from '../../lib/tiempo'
 import type { Aspecto } from '../../lib/urgencia'
@@ -105,6 +105,13 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
           <FolderKanban size={tamIcono} aria-label="Tarea interna" strokeWidth={1.75} />
         )}
         <span className="co-globo__recorte">{textoResponsables(tarea, densidad)}</span>
+        {tarea.pedido && densidad !== 'mini' && (
+          <span className="co-globo__pedido" title={`Para el pedido ${tarea.pedido.titulo}`}>
+            <Link2 size={tamIcono} aria-hidden strokeWidth={2} />
+            <span className="co-solo-lector">Para el pedido </span>
+            <span className="co-globo__recorte">{tarea.pedido.titulo}</span>
+          </span>
+        )}
         {total > 0 && (
           <span className="co-globo__progreso" aria-label={`${hechas} de ${total} pasos hechos`}>
             <ListChecks size={tamIcono} aria-hidden strokeWidth={1.75} />

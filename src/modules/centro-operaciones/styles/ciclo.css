@@ -290,3 +290,16 @@
   accent-color: var(--co-blanco);
   cursor: pointer;
 }
+
+/* Tarea interna relacionada con un pedido: el pedido, al lado de los responsables. */
+.co-globo__pedido {
+  display: inline-flex;
+  flex: 0 1 45%;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: rgb(255 255 255 / 0.85);
+}
+.co-globo__pedido > svg {
+  flex: none;
+}

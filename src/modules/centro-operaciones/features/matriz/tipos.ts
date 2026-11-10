@@ -29,6 +29,8 @@ export interface TareaMatriz {
   /** Lo que debe el cliente (para "Copiar mensaje"). */
   saldo: number
   cliente: { nombre: string; telefono: string | null } | null
+  /** Tarea interna relacionada con un pedido (orden de trabajo). */
+  pedido?: { id: string; titulo: string } | null
   responsables: PersonaBreve[]
   subtareas: { total: number; hechas: number }
   /** Se está guardando (creación optimista): todavía no se puede abrir. */

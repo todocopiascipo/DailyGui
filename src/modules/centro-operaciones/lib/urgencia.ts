@@ -140,3 +140,19 @@ export function movimiento(
     urgencia_manual: (urgente ? Math.max(efectiva, 3) : Math.min(efectiva, 2)) as Nivel,
   }
 }
+
+/**
+ * Urgencia al elegir "Urgente: Sí / No" en un formulario. Con la misma regla
+ * que al arrastrar entre columnas: urgente → al menos 3; no urgente → como
+ * mucho 2. `null` (según la fecha) deja la urgencia automática.
+ */
+export function urgenciaElegida(
+  urgente: boolean | null,
+  entrega: Date | null,
+  ahora: Date,
+  umbrales: Umbrales = UMBRALES_POR_DEFECTO,
+): Nivel | null {
+  if (urgente === null) return null
+  const estimada = urgenciaEstimada(entrega, ahora, umbrales)
+  return (urgente ? Math.max(estimada, 3) : Math.min(estimada, 2)) as Nivel
+}

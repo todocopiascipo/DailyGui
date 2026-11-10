@@ -30,6 +30,7 @@ const COLUMNAS_TAREA = [
   'titulo',
   'descripcion',
   'categoria_id',
+  'pedido_id',
   'proyecto_id',
   'cliente_id',
   'sena',
@@ -122,6 +123,7 @@ export function crearTarea(
       descripcion: null,
       categoria_id: null,
       proyecto_id: null,
+      pedido_id: null,
       sena: 0,
       saldo: 0,
       sena_medio: null,
@@ -147,6 +149,7 @@ export function crearTarea(
       created_at: ahora,
     }
     const tarea = reglasAlGuardar(null, base, persona, ahora)
+    controlarPedido(db, tarea)
     db.prepare(
       `INSERT INTO tareas (${COLUMNAS_TAREA.join(', ')})
        VALUES (${COLUMNAS_TAREA.map(() => '?').join(', ')})`,
@@ -201,6 +204,7 @@ export function actualizarTarea(
       datos.cliente_id = extras.cliente ? guardarCliente(db, extras.cliente) : null
     }
     const nueva = reglasAlGuardar(anterior, { ...anterior, ...datos }, persona, ahora)
+    controlarPedido(db, nueva)
     const columnas = COLUMNAS_TAREA.filter((c) => c !== 'id' && c !== 'updated_at')
     db.prepare(`UPDATE tareas SET ${columnas.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).run(
       ...columnas.map((c) => aSqlite(nueva[c])),
@@ -210,6 +214,20 @@ export function actualizarTarea(
     if (extras.responsables) reasignar(db, nueva, extras.responsables, persona, ahora)
     return leerTarea(db, id)!
   })
+}
+
+/**
+ * "Pedido relacionado": solo en tareas internas, y tiene que ser un pedido
+ * (orden de trabajo) existente, distinto de la tarea misma.
+ */
+function controlarPedido(db: BaseDeDatos, t: Tarea) {
+  if (!t.pedido_id) return
+  if (t.tipo !== 'interna')
+    throw new ErrorValidacion('Solo las tareas internas tienen pedido relacionado')
+  const pedido = leerTarea(db, t.pedido_id)
+  if (!pedido || pedido.id === t.id || pedido.tipo !== 'pedido') {
+    throw new ErrorValidacion('El pedido relacionado no existe')
+  }
 }
 
 function idsResponsables(db: BaseDeDatos, tareaId: string): string[] {

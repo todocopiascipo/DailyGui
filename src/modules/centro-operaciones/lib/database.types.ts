@@ -343,6 +343,7 @@ export type Database = {
           mostrar_en_matriz: boolean
           motivo_espera: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle: string | null
+          pedido_id: string | null
           proyecto_id: string | null
           saldo: number
           saldo_medio: Database['public']['Enums']['medio_pago'] | null
@@ -373,6 +374,7 @@ export type Database = {
           mostrar_en_matriz?: boolean
           motivo_espera?: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle?: string | null
+          pedido_id?: string | null
           proyecto_id?: string | null
           saldo?: number
           saldo_medio?: Database['public']['Enums']['medio_pago'] | null
@@ -403,6 +405,7 @@ export type Database = {
           mostrar_en_matriz?: boolean
           motivo_espera?: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle?: string | null
+          pedido_id?: string | null
           proyecto_id?: string | null
           saldo?: number
           saldo_medio?: Database['public']['Enums']['medio_pago'] | null

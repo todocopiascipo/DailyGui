@@ -534,6 +534,45 @@ describe('API de edición', () => {
     expect((await api('GET', `/personas/${crypto.randomUUID()}/tareas`)).estado).toBe(404)
   })
 
+  it('tarea interna relacionada con un pedido (OT)', async () => {
+    const ot = (
+      await api('POST', '/tareas', {
+        tarea: { titulo: 'Vinilo vidriera', importante: true },
+        cliente: { nombre_apellido: 'Ana Cliente' },
+      })
+    ).cuerpo.tarea.id as string
+    const interna = await api('POST', '/tareas', {
+      tarea: { titulo: 'Comprar vinilo', importante: false, tipo: 'interna', pedido_id: ot },
+    })
+    expect(interna.estado).toBe(201)
+    expect(interna.cuerpo.pedido).toEqual({ id: ot, titulo: 'Vinilo vidriera' })
+    const m = (await api('GET', '/matriz')).cuerpo.tareas.find(
+      (t: { titulo: string }) => t.titulo === 'Comprar vinilo',
+    )
+    expect(m.pedido).toEqual({ id: ot, titulo: 'Vinilo vidriera' })
+
+    // Solo internas, y solo hacia un pedido existente.
+    const casos = [
+      { tarea: { titulo: 'x', importante: true, tipo: 'pedido', pedido_id: ot } },
+      { tarea: { titulo: 'x', importante: true, tipo: 'interna', pedido_id: crypto.randomUUID() } },
+      {
+        tarea: {
+          titulo: 'x',
+          importante: true,
+          tipo: 'interna',
+          pedido_id: interna.cuerpo.tarea.id,
+        },
+      },
+    ]
+    for (const c of casos) expect((await api('POST', '/tareas', c)).estado).toBe(400)
+
+    // Pasar a pedido quita el enlace.
+    const e = await api('PATCH', `/tareas/${interna.cuerpo.tarea.id}`, {
+      cambios: { tipo: 'pedido' },
+    })
+    expect(e.cuerpo.tarea.pedido_id).toBeNull()
+  })
+
   it('rechaza datos inválidos sin guardar nada', async () => {
     const casos = [
       { tarea: { titulo: '', importante: true } },

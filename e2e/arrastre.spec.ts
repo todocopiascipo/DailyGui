@@ -202,7 +202,10 @@ test('orden de trabajo: con la forma de la OT de papel', async ({ page }) => {
   await expect(ot.getByText('Total (seña + debe): $ 12.500')).toBeVisible()
   await ot.getByLabel('Celular').fill('2991234567')
   await ot.getByLabel('Nombre', { exact: true }).fill('Cliente OT')
-  await ot.getByRole('radio', { name: 'Sí' }).click()
+  await ot
+    .getByRole('radiogroup', { name: 'Importante' })
+    .getByRole('radio', { name: 'Sí' })
+    .click()
   await ot.getByRole('button', { name: 'Crear OT' }).click()
 
   // La primera línea del detalle es el título.

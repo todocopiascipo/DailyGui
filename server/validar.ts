@@ -80,6 +80,7 @@ function camposTarea(o: Objeto): CambiosTarea {
   if ('descripcion' in o) c.descripcion = textoOpcional(o.descripcion, 'Descripción', 2000)
   if ('tipo' in o) c.tipo = opcion(o.tipo, TIPOS, 'Tipo')
   if ('categoria_id' in o) c.categoria_id = idOpcional(o.categoria_id, 'Categoría')
+  if ('pedido_id' in o) c.pedido_id = idOpcional(o.pedido_id, 'Pedido relacionado')
   if ('sena' in o) c.sena = importe(o.sena, 'Seña')
   if ('saldo' in o) c.saldo = importe(o.saldo, 'Saldo')
   if ('sena_medio' in o) c.sena_medio = medio(o.sena_medio, 'Medio de pago de la seña')
@@ -173,6 +174,8 @@ export function validarEdicionTarea(cuerpo: unknown): {
   if (o.cliente !== undefined) extras.cliente = cliente(o.cliente)
   // Una tarea interna no tiene cliente.
   if (cambios.tipo === 'interna') extras.cliente = null
+  // Un pedido no tiene "pedido relacionado" (eso es de las internas).
+  if (cambios.tipo === 'pedido') cambios.pedido_id = null
   return { cambios, extras }
 }
 

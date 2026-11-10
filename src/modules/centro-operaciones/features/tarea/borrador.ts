@@ -6,6 +6,7 @@ import type { Enums } from '../../lib/database.types'
 import { aFechaHora, aIso, SIN_FECHA, type FechaHora } from '../../lib/fechas'
 import type { PersonaBreve, TareaMatriz } from '../matriz/tipos'
 import type { DetalleTarea } from './tipos'
+import { urgenciaElegida, type Umbrales } from '../../lib/urgencia'
 
 export interface BorradorCliente {
   /** Cliente existente vinculado (null = nuevo). */
@@ -23,6 +24,8 @@ export interface Borrador {
   entrega: FechaHora
   inicio: FechaHora
   importante: boolean | null
+  /** Al crear: urgente sí / no, o null = según la fecha de entrega. */
+  urgente: boolean | null
   urgencia_manual: number | null
   estado: Enums<'estado_tarea'>
   motivo_espera: Enums<'motivo_espera'> | null
@@ -33,6 +36,8 @@ export interface Borrador {
   sena_medio: MedioPago | null
   saldo_medio: MedioPago | null
   categoria_id: string
+  /** Pedido (OT) con el que se relaciona una tarea interna ('' = ninguno). */
+  pedido_id: string
   descripcion: string
 }
 
@@ -46,6 +51,7 @@ export function borradorVacio(): Borrador {
     entrega: SIN_FECHA,
     inicio: SIN_FECHA,
     importante: null,
+    urgente: null,
     urgencia_manual: null,
     estado: 'pendiente',
     motivo_espera: null,
@@ -56,6 +62,7 @@ export function borradorVacio(): Borrador {
     sena_medio: null,
     saldo_medio: null,
     categoria_id: '',
+    pedido_id: '',
     descripcion: '',
   }
 }
@@ -71,6 +78,7 @@ export function borradorDe(d: DetalleTarea): Borrador {
     entrega: aFechaHora(t.fecha_entrega),
     inicio: aFechaHora(t.fecha_inicio),
     importante: t.importante,
+    urgente: null,
     urgencia_manual: t.urgencia_manual,
     estado: t.estado,
     motivo_espera: t.motivo_espera,
@@ -87,6 +95,7 @@ export function borradorDe(d: DetalleTarea): Borrador {
     sena_medio: t.sena_medio,
     saldo_medio: t.saldo_medio,
     categoria_id: t.categoria_id ?? '',
+    pedido_id: t.pedido_id ?? '',
     descripcion: t.descripcion ?? '',
   }
 }
@@ -152,6 +161,7 @@ function camposTarea(b: Borrador) {
     tipo: b.tipo,
     descripcion: b.descripcion.trim() || null,
     categoria_id: b.categoria_id || null,
+    pedido_id: b.tipo === 'interna' ? b.pedido_id || null : null,
     sena: pedido ? (leerImporte(b.sena) ?? 0) : 0,
     saldo: pedido ? (leerImporte(b.saldo) ?? 0) : 0,
     sena_medio: pedido ? b.sena_medio : null,
@@ -256,4 +266,19 @@ export function cuerpoEdicion(b: Borrador, original: DetalleTarea) {
     cuerpo.cliente = clienteDespues
   }
   return Object.keys(cuerpo).length > 0 ? cuerpo : null
+}
+
+/** El borrador listo para guardar, con la urgencia elegida ya resuelta. */
+export function conUrgenciaElegida(b: Borrador, ahora: Date, umbrales?: Umbrales): Borrador {
+  if (b.urgente === null) return b
+  const entrega = aIso(b.entrega)
+  return {
+    ...b,
+    urgencia_manual: urgenciaElegida(
+      b.urgente,
+      entrega ? new Date(entrega) : null,
+      ahora,
+      umbrales,
+    ),
+  }
 }

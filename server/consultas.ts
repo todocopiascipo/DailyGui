@@ -24,7 +24,8 @@ const COLUMNAS_TARJETA = `t.id, t.tipo, t.titulo, t.importante, t.urgencia_manua
   t.terminada_at, t.entregada_at,
   c.nombre_apellido AS cliente_nombre, c.telefono AS cliente_telefono,
   (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id) AS sub_total,
-  (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id AND s.hecha = 1) AS sub_hechas
+  (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id AND s.hecha = 1) AS sub_hechas,
+  t.pedido_id, (SELECT x.titulo FROM tareas x WHERE x.id = t.pedido_id) AS pedido_titulo
   FROM tareas t LEFT JOIN clientes c ON c.id = t.cliente_id`
 
 /** Lo que muestra la matriz: tareas activas, con responsables y avance de subtareas. */
@@ -115,6 +116,7 @@ function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatr
     cliente: f.cliente_nombre
       ? { nombre: String(f.cliente_nombre), telefono: texto(f.cliente_telefono) }
       : null,
+    pedido: f.pedido_id ? { id: String(f.pedido_id), titulo: String(f.pedido_titulo) } : null,
     responsables: responsables.get(String(f.id)) ?? [],
     subtareas: { total: Number(f.sub_total), hechas: Number(f.sub_hechas) },
   }))
@@ -201,7 +203,11 @@ export function cargarDetalle(db: BaseDeDatos, id: string): DetalleTarea | null 
     cambios: JSON.parse(String(e.cambios)) as Record<string, unknown>,
     created_at: String(e.created_at),
   }))
-  return { tarea, responsables, subtareas, cliente, creada_por, eventos }
+  const pedido = tarea.pedido_id
+    ? ((db.prepare('SELECT id, titulo FROM tareas WHERE id = ?').get(tarea.pedido_id) as unknown as
+        { id: string; titulo: string } | undefined) ?? null)
+    : null
+  return { tarea, responsables, subtareas, cliente, creada_por, eventos, pedido }
 }
 
 export interface TareaPapelera {

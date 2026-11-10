@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { ContextoConexion, type EstadoConexion } from '../../lib/tiempoReal'
 import { borradorVacio } from './borrador'
 import { CreacionRapida, type EstadoCreacion } from './CreacionRapida'
@@ -19,14 +19,31 @@ function dibujar({
           { id: 'p1', nombre: 'Uno', iniciales: 'U' },
           { id: 'p2', nombre: 'Dos', iniciales: 'D' },
         ],
-        categorias: [],
+        categorias: [
+          { id: 'c1', nombre: 'Mantenimiento de máquinas', tipo_aplica: 'interna' },
+          { id: 'c2', nombre: 'Impresión color', tipo_aplica: 'pedido' },
+        ],
       }),
     ),
   )
   const onCerrar = vi.fn()
   const onGuardar = vi.fn()
+  // Pedidos ya cargados (para "Pedido relacionado"), como los trae la matriz.
+  const qc = new QueryClient()
+  qc.setQueryData(['matriz'], {
+    tareas: [
+      {
+        id: 'ot1',
+        tipo: 'pedido',
+        titulo: 'Vinilo vidriera',
+        cliente: { nombre: 'Ana', telefono: null },
+      },
+      { id: 'otra', tipo: 'interna', titulo: 'Ordenar depósito', cliente: null },
+    ],
+    config: { umbrales: { nivel_5_horas: 2, nivel_3_horas: 24, nivel_2_horas: 72 } },
+  })
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={qc}>
       <ContextoConexion.Provider value={conexion}>
         <CreacionRapida
           ahora={ahora}
@@ -63,7 +80,8 @@ describe('CreacionRapida', () => {
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Vinilo vidriera' } })
     fireEvent.click(await screen.findByRole('button', { name: 'Dos' }))
     fireEvent.click(screen.getByRole('button', { name: '+2 h' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Sí' }))
+    const importante = screen.getByRole('radiogroup', { name: 'Importante' })
+    fireEvent.click(within(importante).getByRole('radio', { name: 'Sí' }))
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
 
     expect(onGuardar).toHaveBeenCalledTimes(1)
@@ -71,7 +89,10 @@ describe('CreacionRapida', () => {
     expect(alta.cuerpo).toMatchObject({
       tarea: {
         titulo: 'Vinilo vidriera',
+        tipo: 'interna',
         importante: true,
+        // "Urgente: Por fecha": la urgencia queda automática.
+        urgencia_manual: null,
         // 14:20 + 2 h → 16:30 en Buenos Aires.
         fecha_entrega: '2026-11-06T19:30:00.000Z',
       },
@@ -105,13 +126,36 @@ describe('CreacionRapida', () => {
     expect(onGuardar).not.toHaveBeenCalled()
   })
 
-  it('"Más datos" muestra cliente, seña, saldo y subtareas', () => {
-    dibujar()
+  it('tarea interna simple: categorías internas y pedido relacionado, sin datos de cliente', async () => {
+    const { onGuardar } = dibujar()
+    expect(screen.queryByLabelText('Cliente (nombre y apellido)')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Más datos' }))
-    expect(screen.getByLabelText('Cliente (nombre y apellido)')).toBeInTheDocument()
-    expect(screen.getByLabelText('Seña')).toBeInTheDocument()
-    expect(screen.getByLabelText('Saldo (lo que deben)')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('radio', { name: 'Tarea interna' }))
     expect(screen.queryByLabelText('Seña')).not.toBeInTheDocument()
+
+    const categoria = screen.getByLabelText('Categoría')
+    // Las categorías llegan del servidor.
+    await within(categoria).findByRole('option', { name: 'Mantenimiento de máquinas' })
+    expect(within(categoria).queryByRole('option', { name: 'Impresión color' })).toBeNull()
+    fireEvent.change(categoria, { target: { value: 'c1' } })
+    // Solo pedidos (órdenes de trabajo) para relacionar.
+    const pedido = screen.getByLabelText('Pedido relacionado')
+    expect(within(pedido).queryByRole('option', { name: /Ordenar depósito/ })).toBeNull()
+    fireEvent.change(pedido, { target: { value: 'ot1' } })
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Comprar vinilo' } })
+    const importante = screen.getByRole('radiogroup', { name: 'Importante' })
+    fireEvent.click(within(importante).getByRole('radio', { name: 'No' }))
+    // Urgente "Sí" sin fecha: urgencia 3 (urgente).
+    const urgente = screen.getByRole('radiogroup', { name: 'Urgente' })
+    fireEvent.click(within(urgente).getByRole('radio', { name: 'Sí' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
+
+    expect(onGuardar.mock.calls[0]![0].cuerpo.tarea).toMatchObject({
+      tipo: 'interna',
+      categoria_id: 'c1',
+      pedido_id: 'ot1',
+      importante: false,
+      urgencia_manual: 3,
+    })
   })
 })

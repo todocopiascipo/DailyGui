@@ -368,11 +368,13 @@ export function PantallaPrincipal() {
           {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
           {abierta && (
             <DetalleTarea
+              key={abierta}
               id={abierta}
               ahora={ahora}
               umbrales={matriz.data.config.umbrales}
               onCerrar={() => setAbierta(null)}
               onAccion={ejecutar}
+              onAbrirOtra={setAbierta}
             />
           )}
           {porConfirmar && confirmacion && (

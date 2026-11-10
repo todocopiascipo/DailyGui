@@ -27,10 +27,13 @@ Desde el iPad o el monitor: la dirección "Network" que aparece en la consola
 
 En la matriz:
 
-- **Crear una tarea:** tecla `N` (en la PC) o el botón `+` casi transparente
-  abajo al centro (en el celular, abajo a la derecha).
-- **Orden de trabajo:** tecla `O` o el botón `OT`, al lado del `+`. Tiene la
-  forma de la OT de papel; la primera línea del detalle es el título.
+- **Tarea interna:** tecla `N` o el botón `+` casi transparente abajo al
+  centro (en el celular, abajo a la derecha). Formulario simple: título,
+  responsables, entrega, importante, urgente (sí, no o según la fecha),
+  categoría y, si es para un pedido, la orden de trabajo relacionada.
+- **Orden de trabajo (pedido):** tecla `O` o el botón `OT`, al lado del `+`.
+  Tiene la forma de la OT de papel; la primera línea del detalle es el título
+  y las fechas van al final.
 - **Mover de cuadrante:** arrastrar el globo (en el iPad, mantener presionado y
   arrastrar). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
   recuperar desde Configuración (engranaje abajo a la derecha) › Papelera
