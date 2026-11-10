@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { PersonaBreve } from '../matriz/tipos'
+import { useConectado } from '../../lib/tiempoReal'
 import { useSubtareas } from './datos'
 import type { SubtareaDetalle } from './tipos'
 
@@ -18,6 +19,7 @@ export function Subtareas({
   personas: PersonaBreve[]
 }) {
   const op = useSubtareas(tareaId)
+  const conectado = useConectado()
   const [titulo, setTitulo] = useState('')
   const [responsable, setResponsable] = useState('')
 
@@ -41,87 +43,90 @@ export function Subtareas({
       <h3 className="co-campo__etiqueta">
         Subtareas{subtareas.length > 0 ? ` · ${hechas}/${subtareas.length}` : ''}
       </h3>
-      <ul className="co-subtareas">
-        {subtareas.map((s) => (
-          <li key={s.id} className="co-fila" data-hecha={s.hecha}>
-            <CasillaHecha
-              titulo={s.titulo}
-              hecha={s.hecha}
-              onCambiar={(hecha, revertir) =>
-                op.mutate({ tipo: 'editar', id: s.id, cambios: { hecha } }, { onError: revertir })
-              }
-            />
-            <TituloSubtarea
-              valor={s.titulo}
-              onGuardar={(v) => op.mutate({ tipo: 'editar', id: s.id, cambios: { titulo: v } })}
-            />
-            <select
-              className="co-entrada co-entrada--select co-entrada--chica"
-              aria-label={`Responsable de ${s.titulo}`}
-              value={s.responsable_id ?? ''}
-              onChange={(e) =>
-                op.mutate({
-                  tipo: 'editar',
-                  id: s.id,
-                  cambios: { responsable_id: e.target.value || null },
-                })
-              }
-            >
-              <option value="">Sin asignar</option>
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="co-boton-icono"
-              aria-label={`Quitar ${s.titulo}`}
-              onClick={() => op.mutate({ tipo: 'borrar', id: s.id })}
-            >
-              <Trash2 size={16} aria-hidden />
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="co-fila">
-        <input
-          className="co-entrada co-entrada--chica"
-          aria-label="Nueva subtarea"
-          placeholder="Nueva subtarea"
-          maxLength={200}
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              agregar()
-            }
-          }}
-        />
-        <select
-          className="co-entrada co-entrada--select co-entrada--chica"
-          aria-label="Responsable de la nueva subtarea"
-          value={responsable}
-          onChange={(e) => setResponsable(e.target.value)}
-        >
-          <option value="">Sin asignar</option>
-          {personas.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
+      {/* Sin conexión, la lista se ve pero no se puede modificar. */}
+      <fieldset className="co-sin-borde" disabled={!conectado}>
+        <ul className="co-subtareas">
+          {subtareas.map((s) => (
+            <li key={s.id} className="co-fila" data-hecha={s.hecha}>
+              <CasillaHecha
+                titulo={s.titulo}
+                hecha={s.hecha}
+                onCambiar={(hecha, revertir) =>
+                  op.mutate({ tipo: 'editar', id: s.id, cambios: { hecha } }, { onError: revertir })
+                }
+              />
+              <TituloSubtarea
+                valor={s.titulo}
+                onGuardar={(v) => op.mutate({ tipo: 'editar', id: s.id, cambios: { titulo: v } })}
+              />
+              <select
+                className="co-entrada co-entrada--select co-entrada--chica"
+                aria-label={`Responsable de ${s.titulo}`}
+                value={s.responsable_id ?? ''}
+                onChange={(e) =>
+                  op.mutate({
+                    tipo: 'editar',
+                    id: s.id,
+                    cambios: { responsable_id: e.target.value || null },
+                  })
+                }
+              >
+                <option value="">Sin asignar</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="co-boton-icono"
+                aria-label={`Quitar ${s.titulo}`}
+                onClick={() => op.mutate({ tipo: 'borrar', id: s.id })}
+              >
+                <Trash2 size={16} aria-hidden />
+              </button>
+            </li>
           ))}
-        </select>
-        <button
-          type="button"
-          className="co-boton-sutil"
-          onClick={agregar}
-          disabled={titulo.trim() === '' || op.isPending}
-        >
-          <Plus size={14} aria-hidden /> Agregar
-        </button>
-      </div>
+        </ul>
+        <div className="co-fila">
+          <input
+            className="co-entrada co-entrada--chica"
+            aria-label="Nueva subtarea"
+            placeholder="Nueva subtarea"
+            maxLength={200}
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                agregar()
+              }
+            }}
+          />
+          <select
+            className="co-entrada co-entrada--select co-entrada--chica"
+            aria-label="Responsable de la nueva subtarea"
+            value={responsable}
+            onChange={(e) => setResponsable(e.target.value)}
+          >
+            <option value="">Sin asignar</option>
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="co-boton-sutil"
+            onClick={agregar}
+            disabled={titulo.trim() === '' || op.isPending}
+          >
+            <Plus size={14} aria-hidden /> Agregar
+          </button>
+        </div>
+      </fieldset>
       {op.isError && (
         <p className="co-aviso" role="alert">
           No se pudo guardar la subtarea: {op.error.message}

@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query'
 import { pedir } from '../../lib/api'
-import type { PersonaBreve } from '../matriz/tipos'
+import type { PersonaBreve, TareaMatriz } from '../matriz/tipos'
 import type { Catalogos, Cliente, DetalleTarea } from './tipos'
 
 export function useCatalogos() {
@@ -35,11 +35,36 @@ const json = (metodo: string, cuerpo: unknown): RequestInit => ({
   body: JSON.stringify(cuerpo),
 })
 
+interface AltaTarea {
+  cuerpo: unknown
+  /** Cómo se ve en la matriz mientras se guarda. */
+  provisoria: TareaMatriz
+}
+
+const CLAVE_ALTA = ['crear-tarea']
+
+/**
+ * Alta de tarea. Es optimista (especificación 8): mientras se guarda, la
+ * matriz la muestra con un id provisorio (ver `useTareasProvisorias`).
+ */
 export function useCrearTarea() {
   const alGuardar = useAlGuardar()
   return useMutation({
-    mutationFn: (cuerpo: unknown) => pedir<DetalleTarea>('/tareas', json('POST', cuerpo)),
+    mutationKey: CLAVE_ALTA,
+    mutationFn: ({ cuerpo }: AltaTarea) => pedir<DetalleTarea>('/tareas', json('POST', cuerpo)),
+    // Sigue "en curso" hasta que llega la matriz real, así no hay parpadeo.
     onSuccess: alGuardar,
+  })
+}
+
+/**
+ * Tareas que se están guardando. Si el servidor rechaza una, deja de estar
+ * en curso y desaparece sola de la matriz.
+ */
+export function useTareasProvisorias(): TareaMatriz[] {
+  return useMutationState({
+    filters: { mutationKey: CLAVE_ALTA, status: 'pending' },
+    select: (m) => (m.state.variables as AltaTarea).provisoria,
   })
 }
 

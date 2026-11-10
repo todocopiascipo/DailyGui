@@ -32,6 +32,10 @@ En la matriz:
 - **Ver y editar una tarea:** tocar su globo. Las subtareas se guardan al
   momento; el resto, con "Guardar cambios".
 - Las personas del equipo se agregan con "+ Persona" dentro del formulario.
+- **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en
+  menos de un segundo. Si se corta la conexión con la PC del local aparece
+  "Sin conexión · reconectando" abajo a la izquierda y no se puede guardar
+  hasta que vuelva; al volver, todo se actualiza solo.
 
 Con datos de demostración (solo en desarrollo, no se guardan):
 http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
@@ -45,6 +49,8 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   (`estado_anterior`, `terminada_at`, `entregada_at`, autoría, responsables de
   subtareas). La persona activa viaja en el encabezado `x-persona-id`.
 - Configuración opcional en `.env.local` (ver `.env.example`).
+- Tiempo real: `GET /api/cambios` (Server-Sent Events, `server/canal.ts`)
+  avisa cada cambio a las pantallas abiertas, con un latido cada 5 s.
 - API (`server/app.ts`): `GET /api/matriz`, `GET /api/catalogos`,
   `GET /api/clientes?telefono=`, `POST /api/personas`, `POST /api/tareas`,
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,

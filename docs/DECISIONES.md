@@ -13,6 +13,9 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-07 | Urgencia manual vs. automática (abierta 7) | Valor por defecto de la especificación: **manda la manual**. En el detalle, el slider muestra la urgencia efectiva y "Urgencia estimada: N"; "Volver a la automática" quita la manual. |
 | 2026-11-07 | Nombres del equipo | No se precargan. Mientras no llegue Configuración (Fase 9), las personas se dan de alta con "+ Persona" desde el formulario de la tarea (iniciales automáticas). |
 | 2026-11-07 | Atajos de entrega | "Hoy" y "Mañana" cambian el día y conservan la hora elegida (si no hay, proponen la próxima hora en punto). "+1 h / +2 h / +4 h" fijan la hora desde ahora, redondeada a los 15 minutos siguientes. No se asume un horario del local. |
+| 2026-11-09 | Sin conexión (abierta 10) | Valor por defecto de la especificación: **se bloquea guardar** con un aviso amable. Lo que se esté cargando en un formulario no se pierde: queda ahí y se guarda cuando vuelve la conexión. |
+| 2026-11-09 | Tiempo real local | Canal de avisos del servidor (`/api/cambios`, Server-Sent Events, sin dependencias). Latido cada 5 s; sin latido por 12 s se muestra "Sin conexión" y se reconecta. Al reconectar o volver de suspensión se trae todo de nuevo. |
+| 2026-11-09 | Alta optimista | La tarea se ve en la matriz al instante (punteada, "guardando"). La pantalla genera el id y el servidor lo respeta, así nunca hay duplicados. Si el servidor la rechaza, desaparece y el formulario vuelve a abrirse con lo cargado y el motivo. |
 
 ## Consecuencias del prototipo local
 

@@ -20,6 +20,8 @@ export interface TareaMatriz {
   fecha_entrega: string | null
   responsables: PersonaBreve[]
   subtareas: { total: number; hechas: number }
+  /** Se está guardando (creación optimista): todavía no se puede abrir. */
+  provisoria?: boolean
 }
 
 export interface ConfigMatriz {

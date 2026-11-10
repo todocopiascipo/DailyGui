@@ -3,6 +3,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { ATAJOS, aplicarAtajo, SIN_FECHA, type FechaHora } from '../../lib/fechas'
 import type { PersonaBreve } from '../matriz/tipos'
 import type { BorradorCliente } from './borrador'
+import { useConectado } from '../../lib/tiempoReal'
 import { buscarClientes, useCrearPersona } from './datos'
 import type { Cliente } from './tipos'
 
@@ -116,12 +117,13 @@ export function ElegirResponsables({
   const [agregando, setAgregando] = useState(false)
   const [nombre, setNombre] = useState('')
   const crear = useCrearPersona()
+  const conectado = useConectado()
 
   const alternar = (id: string) =>
     onCambiar(elegidas.includes(id) ? elegidas.filter((e) => e !== id) : [...elegidas, id])
 
   const agregar = () => {
-    if (nombre.trim() === '') return
+    if (nombre.trim() === '' || !conectado) return
     crear.mutate(nombre, {
       onSuccess: (p) => {
         onCambiar([...elegidas, p.id])
@@ -174,7 +176,7 @@ export function ElegirResponsables({
                 type="button"
                 className="co-boton-sutil"
                 onClick={agregar}
-                disabled={crear.isPending}
+                disabled={crear.isPending || !conectado}
               >
                 Agregar
               </button>

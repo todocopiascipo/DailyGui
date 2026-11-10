@@ -15,6 +15,8 @@ import {
   SiNo,
   SliderUrgencia,
 } from './controles'
+import { useConectado } from '../../lib/tiempoReal'
+import { AvisoSinConexion } from './AvisoSinConexion'
 import { useCatalogos, useDetalle, useEditarTarea } from './datos'
 import { Dialogo } from './Dialogo'
 import { describirEvento, momentoEvento, NOMBRES_ESTADO, NOMBRES_MOTIVO } from './historial'
@@ -64,6 +66,7 @@ function Editor({
   const idForm = useId()
   const catalogos = useCatalogos()
   const editar = useEditarTarea(detalle.tarea.id)
+  const conectado = useConectado()
   const [b, setB] = useState<Borrador>(() => borradorDe(detalle))
   const [errores, setErrores] = useState<Errores>({})
   const [guardado, setGuardado] = useState(false)
@@ -96,7 +99,7 @@ function Editor({
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cuerpo || editar.isPending) return
+    if (!cuerpo || editar.isPending || !conectado) return
     const err = validar(b)
     setErrores(err)
     if (Object.keys(err).length > 0) return
@@ -138,13 +141,14 @@ function Editor({
             type="submit"
             form={idForm}
             className="co-boton"
-            disabled={!cuerpo || editar.isPending}
+            disabled={!cuerpo || editar.isPending || !conectado}
           >
             {editar.isPending ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </>
       }
     >
+      <AvisoSinConexion />
       <form id={idForm} className="co-formulario" onSubmit={guardar} noValidate>
         <Campo etiqueta="Título" error={errores.titulo}>
           {({ id, descripcion }) => (

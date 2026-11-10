@@ -1,36 +1,44 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { CreacionRapida } from './CreacionRapida'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { ContextoConexion, type EstadoConexion } from '../../lib/tiempoReal'
+import { borradorVacio } from './borrador'
+import { CreacionRapida, type EstadoCreacion } from './CreacionRapida'
 
 const ahora = new Date('2026-11-06T14:20:00-03:00')
 
-function dibujar() {
-  const pedidos: { metodo: string; ruta: string; cuerpo: unknown }[] = []
+function dibujar({
+  conexion = 'conectado',
+  inicial,
+  error,
+}: { conexion?: EstadoConexion; inicial?: EstadoCreacion; error?: string } = {}) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string, init?: RequestInit) => {
-      const metodo = init?.method ?? 'GET'
-      pedidos.push({ metodo, ruta: url, cuerpo: init?.body ? JSON.parse(String(init.body)) : null })
-      const cuerpo =
-        url === '/api/catalogos'
-          ? {
-              personas: [
-                { id: 'p1', nombre: 'Uno', iniciales: 'U' },
-                { id: 'p2', nombre: 'Dos', iniciales: 'D' },
-              ],
-              categorias: [],
-            }
-          : { tarea: { id: 'nueva' }, responsables: [], subtareas: [], eventos: [] }
-      return new Response(JSON.stringify(cuerpo), { status: metodo === 'POST' ? 201 : 200 })
-    }),
+    vi.fn(async () =>
+      Response.json({
+        personas: [
+          { id: 'p1', nombre: 'Uno', iniciales: 'U' },
+          { id: 'p2', nombre: 'Dos', iniciales: 'D' },
+        ],
+        categorias: [],
+      }),
+    ),
   )
   const onCerrar = vi.fn()
+  const onGuardar = vi.fn()
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <CreacionRapida ahora={ahora} onCerrar={onCerrar} />
+      <ContextoConexion.Provider value={conexion}>
+        <CreacionRapida
+          ahora={ahora}
+          onCerrar={onCerrar}
+          onGuardar={onGuardar}
+          inicial={inicial}
+          error={error}
+        />
+      </ContextoConexion.Provider>
     </QueryClientProvider>,
   )
-  return { pedidos, onCerrar }
+  return { onCerrar, onGuardar }
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -43,25 +51,24 @@ describe('CreacionRapida', () => {
   })
 
   it('no guarda sin título ni importancia', () => {
-    const { pedidos } = dibujar()
+    const { onGuardar } = dibujar()
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
     expect(screen.getByText('Escribí un título')).toBeInTheDocument()
     expect(screen.getByText('Elegí si es importante')).toBeInTheDocument()
-    expect(pedidos.filter((p) => p.metodo === 'POST')).toHaveLength(0)
+    expect(onGuardar).not.toHaveBeenCalled()
   })
 
-  it('crea la tarea con título, responsables, entrega e importancia', async () => {
-    const { pedidos, onCerrar } = dibujar()
+  it('entrega el alta con su versión provisoria para la matriz', async () => {
+    const { onGuardar } = dibujar()
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Vinilo vidriera' } })
     fireEvent.click(await screen.findByRole('button', { name: 'Dos' }))
     fireEvent.click(screen.getByRole('button', { name: '+2 h' }))
     fireEvent.click(screen.getByRole('radio', { name: 'Sí' }))
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
 
-    await waitFor(() => expect(onCerrar).toHaveBeenCalled())
-    const alta = pedidos.find((p) => p.metodo === 'POST')
-    expect(alta?.ruta).toBe('/api/tareas')
-    expect(alta?.cuerpo).toMatchObject({
+    expect(onGuardar).toHaveBeenCalledTimes(1)
+    const [alta, estado] = onGuardar.mock.calls[0]!
+    expect(alta.cuerpo).toMatchObject({
       tarea: {
         titulo: 'Vinilo vidriera',
         importante: true,
@@ -71,6 +78,31 @@ describe('CreacionRapida', () => {
       responsables: ['p2'],
       subtareas: [],
     })
+    // La provisoria usa el mismo id con el que se guarda.
+    expect(alta.provisoria).toMatchObject({
+      id: alta.cuerpo.tarea.id,
+      provisoria: true,
+      titulo: 'Vinilo vidriera',
+      responsables: [{ id: 'p2', nombre: 'Dos', iniciales: 'D' }],
+    })
+    expect(estado.b.titulo).toBe('Vinilo vidriera')
+  })
+
+  it('tras un rechazo reabre con lo cargado y el motivo', () => {
+    dibujar({
+      inicial: { b: { ...borradorVacio(), titulo: 'Folletos', importante: false }, subtareas: [] },
+      error: 'Datos inválidos',
+    })
+    expect(screen.getByLabelText('Título')).toHaveValue('Folletos')
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo guardar: Datos inválidos')
+  })
+
+  it('sin conexión se puede cargar pero no guardar', () => {
+    const { onGuardar } = dibujar({ conexion: 'sin_conexion' })
+    expect(screen.getByRole('status')).toHaveTextContent('Sin conexión')
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Vinilo' } })
+    expect(screen.getByRole('button', { name: 'Crear tarea' })).toBeDisabled()
+    expect(onGuardar).not.toHaveBeenCalled()
   })
 
   it('"Más datos" muestra cliente, seña, saldo y subtareas', () => {

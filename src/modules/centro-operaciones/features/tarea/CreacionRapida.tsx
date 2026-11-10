@@ -1,6 +1,18 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId, useState } from 'react'
-import { borradorVacio, cuerpoNuevaTarea, validar, type Borrador, type Errores } from './borrador'
+import { nuevoId } from '../../lib/ids'
+import { useConectado } from '../../lib/tiempoReal'
+import type { TareaMatriz } from '../matriz/tipos'
+import {
+  borradorVacio,
+  cuerpoNuevaTarea,
+  tareaProvisoria,
+  validar,
+  type Borrador,
+  type Errores,
+  type SubtareaNueva,
+} from './borrador'
+import { AvisoSinConexion } from './AvisoSinConexion'
 import {
   Campo,
   CampoFechaHora,
@@ -10,29 +22,42 @@ import {
   Segmentado,
   SiNo,
 } from './controles'
-import { useCatalogos, useCrearTarea } from './datos'
+import { useCatalogos } from './datos'
 import { Dialogo } from './Dialogo'
 import { SelectorCategoria } from './SelectorCategoria'
+
+/** Lo cargado en el formulario (para reabrirlo si el servidor rechaza el alta). */
+export interface EstadoCreacion {
+  b: Borrador
+  subtareas: SubtareaNueva[]
+}
+
+export interface AltaPedida {
+  cuerpo: ReturnType<typeof cuerpoNuevaTarea>
+  provisoria: TareaMatriz
+}
 
 interface Props {
   ahora: Date
   onCerrar: () => void
-  onCreada?: (id: string) => void
+  /** Guarda en segundo plano; el formulario se cierra enseguida. */
+  onGuardar: (alta: AltaPedida, estado: EstadoCreacion) => void
+  /** Al reabrir después de un rechazo: lo que se había cargado y el motivo. */
+  inicial?: EstadoCreacion
+  error?: string
 }
 
 /**
  * Creación rápida (especificación 7.5): título, responsables, entrega e
  * importancia en un paso; el resto en "Más datos", plegado.
  */
-export function CreacionRapida({ ahora, onCerrar, onCreada }: Props) {
+export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: Props) {
   const idForm = useId()
   const catalogos = useCatalogos()
-  const crear = useCrearTarea()
-  const [b, setB] = useState<Borrador>(borradorVacio)
-  const [subtareas, setSubtareas] = useState<{ titulo: string; responsable_id: string | null }[]>(
-    [],
-  )
-  const [mas, setMas] = useState(false)
+  const conectado = useConectado()
+  const [b, setB] = useState<Borrador>(() => inicial?.b ?? borradorVacio())
+  const [subtareas, setSubtareas] = useState<SubtareaNueva[]>(() => inicial?.subtareas ?? [])
+  const [mas, setMas] = useState(() => (inicial?.subtareas.length ?? 0) > 0)
   const [errores, setErrores] = useState<Errores>({})
 
   const cambiar = <K extends keyof Borrador>(k: K, v: Borrador[K]) => {
@@ -45,7 +70,7 @@ export function CreacionRapida({ ahora, onCerrar, onCreada }: Props) {
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault()
-    if (crear.isPending) return
+    if (!conectado) return
     const err = validar(b)
     setErrores(err)
     if (Object.keys(err).length > 0) {
@@ -53,12 +78,14 @@ export function CreacionRapida({ ahora, onCerrar, onCreada }: Props) {
       if (err.cliente || err.sena || err.saldo || err.inicio) setMas(true)
       return
     }
-    crear.mutate(cuerpoNuevaTarea(b, subtareas), {
-      onSuccess: (d) => {
-        onCerrar()
-        onCreada?.(d.tarea.id)
+    const id = nuevoId()
+    onGuardar(
+      {
+        cuerpo: cuerpoNuevaTarea(b, subtareas, id),
+        provisoria: tareaProvisoria(id, b, subtareas, personas),
       },
-    })
+      { b, subtareas },
+    )
   }
 
   return (
@@ -69,17 +96,18 @@ export function CreacionRapida({ ahora, onCerrar, onCreada }: Props) {
       onCerrar={onCerrar}
       pie={
         <>
-          {crear.isError && (
+          {error && conectado && (
             <p className="co-aviso" role="alert">
-              No se pudo guardar: {crear.error.message}
+              No se pudo guardar: {error}
             </p>
           )}
-          <button type="submit" form={idForm} className="co-boton" disabled={crear.isPending}>
-            {crear.isPending ? 'Guardando…' : 'Crear tarea'}
+          <button type="submit" form={idForm} className="co-boton" disabled={!conectado}>
+            Crear tarea
           </button>
         </>
       }
     >
+      <AvisoSinConexion />
       <form id={idForm} className="co-formulario" onSubmit={guardar} noValidate>
         <Campo etiqueta="Título" error={errores.titulo}>
           {({ id, descripcion }) => (

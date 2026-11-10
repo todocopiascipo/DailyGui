@@ -552,3 +552,62 @@
     background: rgb(30 46 112 / 0.9);
   }
 }
+
+/* ---------- Conexión (especificación 8) ---------- */
+/* Indicador discreto, abajo a la izquierda: informa sin alarmar. */
+.co-sin-conexion {
+  position: absolute;
+  bottom: 14px;
+  left: var(--co-space-3);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: var(--co-radius-pill);
+  background: rgb(20 24 70 / 0.85);
+  color: rgb(255 255 255 / 0.92);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  animation: co-velo-entra 200ms ease-out both;
+}
+@media (max-width: 639px) {
+  .co-sin-conexion {
+    bottom: 22px;
+    left: var(--co-space-2);
+  }
+}
+
+.co-aviso-suave {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.08);
+  font-size: 14px;
+  line-height: 20px;
+}
+.co-aviso-suave > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.co-sin-borde {
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Tarea que se está guardando (creación optimista). */
+.co-globo--provisoria {
+  opacity: 0.75;
+  border-style: dashed;
+}

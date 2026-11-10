@@ -141,7 +141,7 @@ export function validarNuevaTarea(cuerpo: unknown): PedidoCrearTarea {
   const c = o.cliente === undefined ? null : cliente(o.cliente)
   if (c && campos.tipo === 'interna') falla('Las tareas internas no tienen cliente')
   return {
-    datos: campos as DatosNuevaTarea,
+    datos: { ...(campos as DatosNuevaTarea), ...('id' in t ? { id: id(t.id, 'Tarea') } : {}) },
     responsables: o.responsables === undefined ? [] : responsables(o.responsables),
     subtareas: subtareas.map((s) => {
       const so = objeto(s, 'Subtarea')

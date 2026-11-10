@@ -77,6 +77,71 @@ async function api(metodo: string, ruta: string, cuerpo?: unknown, persona?: str
   return { estado: r.status, cuerpo: (await r.json()) as any } // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
+/** Abre el canal de cambios y junta los eventos que llegan. */
+async function escucharCanal() {
+  const control = new AbortController()
+  const r = await fetch(`${base}/api/cambios`, { signal: control.signal })
+  expect(r.headers.get('content-type')).toContain('text/event-stream')
+  const eventos: { evento: string; datos: any }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+  const lector = r.body!.getReader()
+  const decodificador = new TextDecoder()
+  let resto = ''
+  void (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await lector.read()
+        if (done) return
+        resto += decodificador.decode(value, { stream: true })
+        const bloques = resto.split('\n\n')
+        resto = bloques.pop() ?? ''
+        for (const b of bloques) {
+          const evento = /^event: (.+)$/m.exec(b)?.[1]
+          const datos = /^data: (.+)$/m.exec(b)?.[1]
+          if (evento && datos) eventos.push({ evento, datos: JSON.parse(datos) })
+        }
+      }
+    } catch {
+      // Cortado por la prueba.
+    }
+  })()
+  return { eventos, cerrar: () => control.abort() }
+}
+
+describe('canal de cambios', () => {
+  it('avisa a las pantallas conectadas cuando se guarda algo', async () => {
+    const canal = await escucharCanal()
+    await expect.poll(() => canal.eventos.map((e) => e.evento)).toContain('hola')
+
+    const r = await api('POST', '/tareas', { tarea: { titulo: 'Aviso', importante: true } })
+    await expect
+      .poll(() => canal.eventos.filter((e) => e.evento === 'cambio'))
+      .toEqual([{ evento: 'cambio', datos: { recursos: ['tareas'], tarea_id: r.cuerpo.tarea.id } }])
+
+    await api('POST', '/personas', { nombre: 'Nueva' })
+    await expect.poll(() => canal.eventos.filter((e) => e.evento === 'cambio').length).toBe(2)
+    expect(canal.eventos.at(-1)!.datos).toEqual({ recursos: ['personas'] })
+
+    // Lo que falla no avisa; leer tampoco.
+    await api('POST', '/tareas', { tarea: { titulo: '' } })
+    await api('GET', '/matriz')
+    await new Promise((ok) => setTimeout(ok, 50))
+    expect(canal.eventos.filter((e) => e.evento === 'cambio')).toHaveLength(2)
+    canal.cerrar()
+  })
+
+  it('manda latidos para detectar cortes', async () => {
+    await new Promise<void>((ok) => servidor.close(() => ok()))
+    servidor = crearServidor(db, { latidoMs: 30 })
+    await new Promise<void>((ok) => servidor.listen(0, '127.0.0.1', ok))
+    base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`
+    const canal = await escucharCanal()
+    await expect
+      .poll(() => canal.eventos.filter((e) => e.evento === 'latido').length)
+      .toBeGreaterThanOrEqual(2)
+    canal.cerrar()
+  })
+})
+
 describe('API de edición', () => {
   it('alta de personas: iniciales automáticas y sin repetidos', async () => {
     const a = await api('POST', '/personas', { nombre: '  Ana   María ' })
@@ -204,6 +269,18 @@ describe('API de edición', () => {
       'subtarea_creada',
       'creada',
     ])
+  })
+
+  it('respeta el id que manda la pantalla (creación optimista) y no lo repite', async () => {
+    const id = crypto.randomUUID()
+    const a = await api('POST', '/tareas', { tarea: { id, titulo: 'Con id', importante: true } })
+    expect(a.cuerpo.tarea.id).toBe(id)
+    const b = await api('POST', '/tareas', { tarea: { id, titulo: 'Repetida', importante: true } })
+    expect(b.estado).toBe(400)
+    const c = await api('POST', '/tareas', {
+      tarea: { id: 'x', titulo: 'Mal id', importante: true },
+    })
+    expect(c.estado).toBe(400)
   })
 
   it('rechaza datos inválidos sin guardar nada', async () => {

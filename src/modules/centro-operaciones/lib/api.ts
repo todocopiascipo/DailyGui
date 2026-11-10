@@ -22,8 +22,20 @@ export async function pedir<T>(ruta: string, opciones: RequestInit = {}): Promis
   const headers = new Headers(opciones.headers)
   if (personaActiva) headers.set('x-persona-id', personaActiva)
   if (opciones.body) headers.set('Content-Type', 'application/json')
-  const res = await fetch(`/api${ruta}`, { ...opciones, headers })
+  let res: Response
+  try {
+    res = await fetch(`/api${ruta}`, { ...opciones, headers })
+  } catch {
+    // Sin red o servidor apagado.
+    throw new ErrorApi(0, 'Sin conexión con el servidor del local')
+  }
   const cuerpo = (await res.json().catch(() => null)) as { error?: string } | null
-  if (!res.ok) throw new ErrorApi(res.status, cuerpo?.error ?? 'Error del servidor')
+  if (!res.ok) {
+    // El proxy de desarrollo responde 5xx sin cuerpo JSON cuando el servidor no está.
+    const mensaje =
+      cuerpo?.error ??
+      (res.status >= 502 ? 'Sin conexión con el servidor del local' : 'Error del servidor')
+    throw new ErrorApi(res.status, mensaje)
+  }
   return cuerpo as T
 }

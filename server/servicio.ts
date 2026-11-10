@@ -22,7 +22,7 @@ export interface Contexto {
   ahora?: string
 }
 
-export type DatosNuevaTarea = Partial<Omit<Tarea, 'id'>> & Pick<Tarea, 'titulo' | 'importante'>
+export type DatosNuevaTarea = Partial<Tarea> & Pick<Tarea, 'titulo' | 'importante'>
 
 const COLUMNAS_TAREA = [
   'id',
@@ -139,7 +139,7 @@ export function crearTarea(
       updated_at: ahora,
       ...datos,
       cliente_id: clienteId,
-      id: randomUUID(),
+      id: datos.id ?? randomUUID(),
       created_at: ahora,
     }
     const tarea = reglasAlGuardar(null, base, persona, ahora)

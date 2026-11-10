@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { crearCanal, type Aviso } from './canal.ts'
 import { buscarClientes, cargarCatalogos, cargarDetalle, cargarMatriz } from './consultas.ts'
 import type { BaseDeDatos } from './db.ts'
 import type { Pista } from './reglas.ts'
@@ -151,9 +152,23 @@ function pistaDe(valor: string | null): Pista | undefined {
   return valor === 'movida_cuadrante' || valor === 'devuelta' ? valor : undefined
 }
 
-export function crearServidor(db: BaseDeDatos) {
-  return createServer(async (pedido, res) => {
+/** Qué avisar a las pantallas conectadas después de un cambio que salió bien. */
+function avisoDe(metodo: string, ruta: string, resultado: unknown): Aviso {
+  if (ruta.startsWith('/api/personas')) return { recursos: ['personas'] }
+  const tareaId =
+    typeof resultado === 'object' && resultado !== null && 'tarea' in resultado
+      ? ((resultado as { tarea: { id?: string } }).tarea.id ?? null)
+      : null
+  return { recursos: ['tareas'], tarea_id: metodo === 'GET' ? null : tareaId }
+}
+
+export function crearServidor(db: BaseDeDatos, opciones: { latidoMs?: number } = {}) {
+  const canal = crearCanal(opciones)
+  const servidor = createServer(async (pedido, res) => {
     const url = new URL(pedido.url ?? '/', 'http://local')
+    if (pedido.method === 'GET' && url.pathname === '/api/cambios') {
+      return canal.abrir(pedido, res)
+    }
     const ruta = encontrar(pedido.method ?? 'GET', url.pathname)
     if (!ruta) return responder(res, 404, { error: 'No encontrado' })
     try {
@@ -170,6 +185,8 @@ export function crearServidor(db: BaseDeDatos) {
         ctx,
       })
       responder(res, pedido.method === 'POST' ? 201 : 200, resultado ?? { ok: true })
+      if (pedido.method !== 'GET')
+        canal.avisar(avisoDe(pedido.method ?? '', url.pathname, resultado))
     } catch (error) {
       if (error instanceof ErrorNoEncontrado) return responder(res, 404, { error: error.message })
       if (error instanceof ErrorValidacion) return responder(res, 400, { error: error.message })
@@ -181,4 +198,11 @@ export function crearServidor(db: BaseDeDatos) {
       responder(res, 500, { error: 'Error interno del servidor' })
     }
   })
+  // Al cerrar el servidor, cortar también las conexiones del canal (si no, close() no termina).
+  const cerrarOriginal = servidor.close.bind(servidor)
+  servidor.close = ((cb?: (err?: Error) => void) => {
+    canal.cerrar()
+    return cerrarOriginal(cb)
+  }) as typeof servidor.close
+  return servidor
 }

@@ -56,9 +56,10 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
 
   return (
     <article
-      className={`co-globo co-globo--${aspecto} co-globo--${densidad}`}
+      className={`co-globo co-globo--${aspecto} co-globo--${densidad}${tarea.provisoria ? ' co-globo--provisoria' : ''}`}
       data-aspecto={aspecto}
       data-testid="co-globo"
+      aria-busy={tarea.provisoria || undefined}
       title={tarea.titulo}
     >
       <div className="co-globo__cabecera">
@@ -89,7 +90,7 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
         )}
       </p>
       {linea && <p className="co-globo__meta co-globo__entrega">{linea}</p>}
-      {onAbrir && (
+      {onAbrir && !tarea.provisoria && (
         // Cubre todo el globo: el área táctil es la tarjeta entera.
         <button
           type="button"

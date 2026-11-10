@@ -4,6 +4,7 @@
  */
 import type { Enums } from '../../lib/database.types'
 import { aFechaHora, aIso, SIN_FECHA, type FechaHora } from '../../lib/fechas'
+import type { PersonaBreve, TareaMatriz } from '../matriz/tipos'
 import type { DetalleTarea } from './tipos'
 
 export interface BorradorCliente {
@@ -158,15 +159,49 @@ function camposTarea(b: Borrador) {
   }
 }
 
-export function cuerpoNuevaTarea(
-  b: Borrador,
-  subtareas: { titulo: string; responsable_id: string | null }[],
-) {
+export interface SubtareaNueva {
+  titulo: string
+  responsable_id: string | null
+}
+
+export function cuerpoNuevaTarea(b: Borrador, subtareas: SubtareaNueva[], id?: string) {
   return {
-    tarea: camposTarea(b),
+    tarea: { ...(id ? { id } : {}), ...camposTarea(b) },
     responsables: b.responsables,
     subtareas: subtareas.filter((s) => s.titulo.trim() !== ''),
     ...(clienteParaApi(b) ? { cliente: clienteParaApi(b) } : {}),
+  }
+}
+
+/**
+ * Cómo se ve la tarea en la matriz mientras el servidor la guarda
+ * (actualización optimista). Usa el mismo id con el que se va a guardar.
+ */
+export function tareaProvisoria(
+  id: string,
+  b: Borrador,
+  subtareas: SubtareaNueva[],
+  personas: PersonaBreve[],
+): TareaMatriz {
+  const c = camposTarea(b)
+  const conTitulo = subtareas.filter((s) => s.titulo.trim() !== '')
+  const ids = new Set([
+    ...b.responsables,
+    ...conTitulo.flatMap((s) => (s.responsable_id ? [s.responsable_id] : [])),
+  ])
+  return {
+    id,
+    provisoria: true,
+    tipo: c.tipo,
+    titulo: c.titulo,
+    importante: c.importante,
+    urgencia_manual: c.urgencia_manual,
+    estado: c.estado,
+    motivo_espera: c.motivo_espera,
+    motivo_espera_detalle: c.motivo_espera_detalle,
+    fecha_entrega: c.fecha_entrega,
+    responsables: personas.filter((p) => ids.has(p.id)),
+    subtareas: { total: conTitulo.length, hechas: 0 },
   }
 }
 
