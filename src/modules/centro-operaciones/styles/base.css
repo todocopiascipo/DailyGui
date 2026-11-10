@@ -25,6 +25,9 @@
   height: 100%;
   min-height: 100dvh;
   overflow: hidden;
+  /* "clip" además impide que el navegador la desplace al enfocar algo (por
+     ejemplo, el panel lateral escondido a la derecha). */
+  overflow: clip;
   font-family: var(--co-font-sans);
   font-size: 16px;
   line-height: 24px;

@@ -24,7 +24,15 @@ export async function limpiar(request: APIRequestContext) {
     id: string
     titulo: string
   }[]
-  for (const t of tareas.filter((t) => t.titulo.includes(s))) {
+  // Lo terminado y lo entregado (que ya no está en la matriz) también.
+  const hechas = (await (await request.get('/api/hechas?desde=1970-01-01T00:00:00Z')).json()) as {
+    terminadas: { id: string; titulo: string }[]
+    entregadas: { id: string; titulo: string }[]
+  }
+  const propias = [...tareas, ...hechas.terminadas, ...hechas.entregadas].filter((t) =>
+    t.titulo.includes(s),
+  )
+  for (const t of new Map(propias.map((t) => [t.id, t])).values()) {
     await request.post(`/api/tareas/${t.id}/eliminar`)
     await request.delete(`/api/tareas/${t.id}`)
   }

@@ -17,15 +17,20 @@ export interface RespuestaMatriz {
   configuracion: { clave: string; valor: unknown }[]
 }
 
+/** Columnas que necesita cada tarjeta (matriz y panel de hechas). */
+const COLUMNAS_TARJETA = `t.id, t.tipo, t.titulo, t.importante, t.urgencia_manual, t.estado,
+  t.estado_anterior, t.motivo_espera, t.motivo_espera_detalle, t.fecha_entrega, t.saldo,
+  t.terminada_at, t.entregada_at,
+  c.nombre_apellido AS cliente_nombre, c.telefono AS cliente_telefono,
+  (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id) AS sub_total,
+  (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id AND s.hecha = 1) AS sub_hechas
+  FROM tareas t LEFT JOIN clientes c ON c.id = t.cliente_id`
+
 /** Lo que muestra la matriz: tareas activas, con responsables y avance de subtareas. */
 export function cargarMatriz(db: BaseDeDatos): RespuestaMatriz {
   const filas = db
     .prepare(
-      `SELECT t.id, t.tipo, t.titulo, t.importante, t.urgencia_manual, t.estado,
-              t.motivo_espera, t.motivo_espera_detalle, t.fecha_entrega,
-              (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id) AS sub_total,
-              (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id AND s.hecha = 1) AS sub_hechas
-       FROM tareas t
+      `SELECT ${COLUMNAS_TARJETA}
        WHERE t.eliminada_at IS NULL
          AND t.mostrar_en_matriz = 1
          AND t.estado IN ('pendiente', 'en_proceso', 'en_espera', 'terminada')
@@ -34,6 +39,48 @@ export function cargarMatriz(db: BaseDeDatos): RespuestaMatriz {
     )
     .all() as Record<string, unknown>[]
 
+  const configuracion = (
+    db
+      .prepare(
+        `SELECT clave, valor FROM configuracion
+         WHERE clave IN ('umbrales_urgencia', 'disposicion_cuadrantes', 'confeti_activado',
+                         'plantilla_mensaje')`,
+      )
+      .all() as { clave: string; valor: string }[]
+  ).map((c) => ({ clave: c.clave, valor: JSON.parse(c.valor) as unknown }))
+
+  return { tareas: aTarjetas(db, filas), configuracion }
+}
+
+export interface RespuestaHechas {
+  terminadas: TareaMatriz[]
+  entregadas: TareaMatriz[]
+}
+
+/**
+ * Panel "Hechas hoy" (especificación 7.8): lo terminado y lo entregado desde
+ * `desde` (el comienzo del día en el local, que calcula la pantalla).
+ */
+export function cargarHechas(db: BaseDeDatos, desde: string): RespuestaHechas {
+  const leer = (condicion: string) =>
+    aTarjetas(
+      db,
+      db.prepare(`SELECT ${COLUMNAS_TARJETA} ${condicion}`).all(desde) as Record<string, unknown>[],
+    )
+  return {
+    terminadas: leer(
+      `WHERE t.eliminada_at IS NULL AND t.estado = 'terminada' AND t.terminada_at >= ?
+       ORDER BY t.terminada_at DESC`,
+    ),
+    entregadas: leer(
+      `WHERE t.eliminada_at IS NULL AND t.estado = 'entregada' AND t.entregada_at >= ?
+       ORDER BY t.entregada_at DESC`,
+    ),
+  }
+}
+
+/** Filas de tareas → tarjetas, con sus responsables. */
+function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatriz[] {
   const responsables = new Map<string, PersonaBreve[]>()
   const filasResp = db
     .prepare(
@@ -48,30 +95,27 @@ export function cargarMatriz(db: BaseDeDatos): RespuestaMatriz {
     responsables.set(r.tarea_id, lista)
   }
 
-  const tareas: TareaMatriz[] = filas.map((f) => ({
+  const texto = (v: unknown) => (v ?? null) as string | null
+  return filas.map((f) => ({
     id: String(f.id),
     tipo: f.tipo as TareaMatriz['tipo'],
     titulo: String(f.titulo),
     importante: f.importante === 1,
     urgencia_manual: f.urgencia_manual === null ? null : Number(f.urgencia_manual),
     estado: f.estado as TareaMatriz['estado'],
+    estado_anterior: (f.estado_anterior ?? null) as TareaMatriz['estado_anterior'],
     motivo_espera: (f.motivo_espera ?? null) as TareaMatriz['motivo_espera'],
-    motivo_espera_detalle: (f.motivo_espera_detalle ?? null) as string | null,
-    fecha_entrega: (f.fecha_entrega ?? null) as string | null,
+    motivo_espera_detalle: texto(f.motivo_espera_detalle),
+    fecha_entrega: texto(f.fecha_entrega),
+    terminada_at: texto(f.terminada_at),
+    entregada_at: texto(f.entregada_at),
+    saldo: Number(f.saldo),
+    cliente: f.cliente_nombre
+      ? { nombre: String(f.cliente_nombre), telefono: texto(f.cliente_telefono) }
+      : null,
     responsables: responsables.get(String(f.id)) ?? [],
     subtareas: { total: Number(f.sub_total), hechas: Number(f.sub_hechas) },
   }))
-
-  const configuracion = (
-    db
-      .prepare(
-        `SELECT clave, valor FROM configuracion
-         WHERE clave IN ('umbrales_urgencia', 'disposicion_cuadrantes')`,
-      )
-      .all() as { clave: string; valor: string }[]
-  ).map((c) => ({ clave: c.clave, valor: JSON.parse(c.valor) as unknown }))
-
-  return { tareas, configuracion }
 }
 
 /** Personas y categorías activas, para los formularios. */

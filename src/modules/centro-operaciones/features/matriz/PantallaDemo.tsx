@@ -1,3 +1,4 @@
+import { PLANTILLA_POR_DEFECTO } from '../../lib/mensaje'
 import { useMemo } from 'react'
 import { DISPOSICION_POR_DEFECTO, UMBRALES_POR_DEFECTO } from '../../lib/urgencia'
 import { tareasDemo } from './demo'
@@ -13,7 +14,12 @@ export default function PantallaDemo() {
     <>
       <Matriz
         tareas={tareas}
-        config={{ umbrales: UMBRALES_POR_DEFECTO, disposicion: DISPOSICION_POR_DEFECTO }}
+        config={{
+          umbrales: UMBRALES_POR_DEFECTO,
+          disposicion: DISPOSICION_POR_DEFECTO,
+          confeti: false,
+          plantilla: PLANTILLA_POR_DEFECTO,
+        }}
         ahora={ahora}
       />
       <span className="co-marca-demo co-etiqueta">Demo</span>

@@ -21,6 +21,12 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-09 | Responsables de acceso rápido | Pedido del usuario: las personas aparecen ordenadas por la asignación más reciente, y "+ Persona" busca entre las existentes (sin importar mayúsculas ni tildes) y ofrece elegirla en vez de duplicarla. |
 | 2026-11-09 | Atajos en todas las fechas | Pedido del usuario: Hoy, Mañana, +1 h, +2 h y +4 h en todos los campos de fecha (entrega, inicio, fecha límite). |
 | 2026-11-09 | Arrastrar y soltar | Sin dependencias. Mouse: se levanta al mover; iPad: manteniendo presionado (350 ms). El tacho aparece abajo al centro solo mientras se arrastra. También se puede eliminar desde el detalle (mismo diálogo). Configuración (por ahora solo la Papelera) se abre con el engranaje discreto abajo a la derecha. |
+| 2026-11-10 | Plantilla "Copiar mensaje" (abierta 8) | La de la especificación: _Hola {nombre}, tu trabajo "{trabajo}" ya está listo para retirar. Saldo pendiente: {saldo}._ Editable en Configuración, con vista previa y "Volver al mensaje original". |
+| 2026-11-10 | Tareas internas (abierta 9) | Valor por defecto: al terminarlas pasan directo a "Terminadas hoy", sin "Entregada". |
+| 2026-11-10 | Devolver al estado anterior | Siempre hacia atrás en el ciclo: entregada → terminada → el estado en curso que tenía (si `estado_anterior` ya no lo dice, sale del historial). Desde el menú, el detalle, el panel "Hechas hoy" o arrastrando un ítem del panel a la matriz. |
+| 2026-11-10 | Dónde están Terminar y Entregada | En el menú de tres puntitos y en el detalle; la tarjeta azul de un pedido terminado muestra además el botón "Entregada". Ambos con confirmación. Al terminar un pedido, el aviso ofrece "Copiar mensaje". |
+| 2026-11-10 | Panel "Hechas hoy" | En la PC aparece al acercar el mouse al borde derecho; en el iPad, deslizando desde el borde o con la pestaña casi transparente del borde derecho. Se reinicia al cambiar el día (hora de Buenos Aires). |
+| 2026-11-10 | Copiar en el iPad | Desde el iPad por la red del local (http) el navegador no habilita el portapapeles moderno: se usa el método clásico como respaldo. |
 
 ## Consecuencias del prototipo local
 

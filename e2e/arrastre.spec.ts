@@ -16,19 +16,33 @@ async function centro(page: Page, selector: string) {
   return { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 }
 }
 
-/** Arrastre con mouse, en pasos (como una persona). */
+/**
+ * Arrastre con mouse, en pasos (como una persona). Las otras pruebas corren a
+ * la vez y agregan tareas: si entre medir y apretar los globos se reacomodaron
+ * y se levantó otro, se suelta con Esc y se vuelve a intentar.
+ */
 async function arrastrar(
   page: Page,
   titulo: string,
   hasta: () => Promise<{ x: number; y: number }>,
 ) {
-  const desde = await centro(page, `[data-testid="co-globo"]:has-text("${titulo}")`)
-  await page.mouse.move(desde.x, desde.y)
-  await page.mouse.down()
-  await page.mouse.move(desde.x + 20, desde.y + 10, { steps: 4 })
-  const destino = await hasta()
-  await page.mouse.move(destino.x, destino.y, { steps: 12 })
-  await page.mouse.up()
+  for (let intento = 0; intento < 5; intento++) {
+    const desde = await centro(page, `[data-testid="co-globo"]:has-text("${titulo}")`)
+    await page.mouse.move(desde.x, desde.y)
+    await page.mouse.down()
+    await page.mouse.move(desde.x + 20, desde.y + 10, { steps: 4 })
+    const levantado = (await page.locator('.co-fantasma').textContent()) ?? ''
+    if (!levantado.includes(titulo)) {
+      await page.keyboard.press('Escape')
+      await page.mouse.up()
+      continue
+    }
+    const destino = await hasta()
+    await page.mouse.move(destino.x, destino.y, { steps: 12 })
+    await page.mouse.up()
+    return
+  }
+  throw new Error(`No se pudo levantar "${titulo}"`)
 }
 
 test.afterEach(({ request }) => limpiar(request))

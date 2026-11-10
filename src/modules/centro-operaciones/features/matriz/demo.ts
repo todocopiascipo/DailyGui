@@ -16,14 +16,21 @@ function horasDesde(ahora: Date, horas: number): string {
 
 export function tareasDemo(ahora: Date = new Date()): TareaMatriz[] {
   let n = 0
-  const t = (datos: Partial<TareaMatriz> & Pick<TareaMatriz, 'titulo' | 'importante'>) => ({
+  const t = (
+    datos: Partial<TareaMatriz> & Pick<TareaMatriz, 'titulo' | 'importante'>,
+  ): TareaMatriz => ({
     id: `demo-${++n}`,
     tipo: 'pedido' as const,
     urgencia_manual: null,
     estado: 'pendiente' as const,
+    estado_anterior: null,
     motivo_espera: null,
     motivo_espera_detalle: null,
     fecha_entrega: null,
+    terminada_at: null,
+    entregada_at: null,
+    saldo: 0,
+    cliente: null,
     responsables: [A],
     subtareas: { total: 0, hechas: 0 },
     ...datos,

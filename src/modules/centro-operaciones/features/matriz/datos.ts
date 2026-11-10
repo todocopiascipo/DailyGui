@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { pedir } from '../../lib/api'
+import { PLANTILLA_POR_DEFECTO } from '../../lib/mensaje'
 import {
   DISPOSICION_POR_DEFECTO,
   UMBRALES_POR_DEFECTO,
@@ -43,7 +44,15 @@ export function leerConfigMatriz(filas: { clave: string; valor: unknown }[]): Co
     if (valida) disposicion = candidata as Disposicion
   }
 
-  return { umbrales, disposicion }
+  const confeti = valor('confeti_activado')
+  const plantilla = valor('plantilla_mensaje')
+  return {
+    umbrales,
+    disposicion,
+    confeti: typeof confeti === 'boolean' ? confeti : true,
+    plantilla:
+      typeof plantilla === 'string' && plantilla.trim() !== '' ? plantilla : PLANTILLA_POR_DEFECTO,
+  }
 }
 
 export interface DatosMatriz {

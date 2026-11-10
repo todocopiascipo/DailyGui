@@ -1,3 +1,4 @@
+import { PLANTILLA_POR_DEFECTO } from '../../lib/mensaje'
 import { DISPOSICION_POR_DEFECTO, UMBRALES_POR_DEFECTO } from '../../lib/urgencia'
 import { leerConfigMatriz } from './datos'
 
@@ -6,6 +7,8 @@ describe('leerConfigMatriz', () => {
     expect(leerConfigMatriz([])).toEqual({
       umbrales: UMBRALES_POR_DEFECTO,
       disposicion: DISPOSICION_POR_DEFECTO,
+      confeti: true,
+      plantilla: PLANTILLA_POR_DEFECTO,
     })
   })
 

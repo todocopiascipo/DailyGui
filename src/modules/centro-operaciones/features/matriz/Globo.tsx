@@ -2,7 +2,9 @@ import { Check, FolderKanban, ListChecks, Pause, Skull } from 'lucide-react'
 import type { Enums } from '../../lib/database.types'
 import { textoEntrega } from '../../lib/tiempo'
 import type { Aspecto } from '../../lib/urgencia'
+import { useAcciones } from './accionesTarea'
 import { useArrastre } from './arrastreContexto'
+import { MenuTarea } from './MenuTarea'
 import type { TareaMatriz } from './tipos'
 
 export type Densidad = 'normal' | 'compacto' | 'mini'
@@ -56,9 +58,16 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
   const tamIcono = densidad === 'mini' ? 12 : 14
   const arrastre = useArrastre()
   const arrastrable = arrastre !== null && !tarea.provisoria
+  const acciones = useAcciones()
+  const entregable =
+    acciones !== null &&
+    !tarea.provisoria &&
+    tarea.estado === 'terminada' &&
+    tarea.tipo === 'pedido'
 
   return (
     <article
+      data-tarea-id={tarea.id}
       className={`co-globo co-globo--${aspecto} co-globo--${densidad}${tarea.provisoria ? ' co-globo--provisoria' : ''}${arrastrable ? ' co-globo--arrastrable' : ''}`}
       data-aspecto={aspecto}
       data-testid="co-globo"
@@ -96,7 +105,22 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
           </span>
         )}
       </p>
-      {linea && <p className="co-globo__meta co-globo__entrega">{linea}</p>}
+      {linea && (
+        <p className="co-globo__meta co-globo__entrega">
+          <span className="co-globo__recorte">{linea}</span>
+          {/* Terminado un pedido, "Terminar" pasa a ser "Entregada" (especificación 6.4). */}
+          {entregable && densidad !== 'mini' && (
+            <button
+              type="button"
+              className="co-globo__accion"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => acciones('entregar', tarea)}
+            >
+              Entregada
+            </button>
+          )}
+        </p>
+      )}
       {onAbrir && !tarea.provisoria && (
         // Cubre todo el globo: el área táctil es la tarjeta entera.
         <button
@@ -106,6 +130,7 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
           onClick={() => onAbrir(tarea.id)}
         />
       )}
+      {acciones && !tarea.provisoria && <MenuTarea tarea={tarea} ejecutar={acciones} />}
     </article>
   )
 }

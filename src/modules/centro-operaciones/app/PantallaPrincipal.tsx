@@ -1,8 +1,16 @@
 import { FileText, Plus, Settings, Trash2, WifiOff } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useCambiosEnCurso, useEliminarTarea, useMoverTarea } from '../features/matriz/acciones'
+import { PanelHechas } from '../features/hechas/PanelHechas'
+import {
+  useCambiarEstado,
+  useCambiosEnCurso,
+  useEliminarTarea,
+  useHechasHoy,
+  useMoverTarea,
+} from '../features/matriz/acciones'
+import { ContextoAcciones, type AccionTarea, type RefTarea } from '../features/matriz/accionesTarea'
 import { ProveedorArrastre } from '../features/matriz/Arrastre'
-import { useArrastre, type Destino } from '../features/matriz/arrastreContexto'
+import { useArrastre, type Destino, type Origen } from '../features/matriz/arrastreContexto'
 import { useMatriz } from '../features/matriz/datos'
 import { Matriz } from '../features/matriz/Matriz'
 import { useAhora } from '../features/matriz/useAhora'
@@ -15,6 +23,8 @@ import {
 import { useCrearTarea, useTareasProvisorias } from '../features/tarea/datos'
 import { DetalleTarea } from '../features/tarea/DetalleTarea'
 import { OrdenDeTrabajo } from '../features/tarea/OrdenDeTrabajo'
+import { lanzarConfeti } from '../lib/confeti'
+import { armarMensaje, copiarTexto } from '../lib/mensaje'
 import { ContextoConexion, useTiempoReal, type EstadoConexion } from '../lib/tiempoReal'
 import { movimiento } from '../lib/urgencia'
 
@@ -34,28 +44,58 @@ interface Creacion {
   error?: string
 }
 
+/** Aviso breve abajo; puede traer una acción ("Copiar mensaje"). */
+interface Aviso {
+  tipo: 'ok' | 'error'
+  texto: string
+  accion?: { texto: string; hacer: () => void }
+}
+
+/** Acciones que piden confirmación (especificación 6.4 y 6.5). */
+interface PorConfirmar {
+  accion: 'terminar' | 'entregar' | 'eliminar'
+  tarea: RefTarea
+}
+
+const CONFIRMACIONES = {
+  terminar: { titulo: '¿Terminar esta tarea?', texto: undefined, confirmar: 'Terminar' },
+  entregar: {
+    titulo: '¿Marcar como entregada?',
+    texto: 'Sale de la matriz y pasa a "Entregados del día".',
+    confirmar: 'Entregada',
+  },
+  eliminar: {
+    titulo: '¿Eliminar esta tarea?',
+    texto: 'Podrás recuperarla desde Configuración › Papelera durante 30 días.',
+    confirmar: 'Eliminar',
+  },
+} as const
+
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : 'Error del servidor')
 
 export function PantallaPrincipal() {
   const ahora = useAhora()
   const matriz = useMatriz()
+  const hechas = useHechasHoy(ahora)
   const conexion = useTiempoReal()
   const crear = useCrearTarea()
   const mover = useMoverTarea()
   const eliminar = useEliminarTarea()
+  const cambiarEstado = useCambiarEstado()
   const provisorias = useTareasProvisorias()
   const aplicarEnCurso = useCambiosEnCurso()
   const [creando, setCreando] = useState<Creacion | null>(null)
   const [abierta, setAbierta] = useState<string | null>(null)
-  const [aEliminar, setAEliminar] = useState<string | null>(null)
+  const [porConfirmar, setPorConfirmar] = useState<PorConfirmar | null>(null)
   const [configurando, setConfigurando] = useState(false)
-  const [aviso, setAviso] = useState<string | null>(null)
-  const hayVentana = creando !== null || abierta !== null || aEliminar !== null || configurando
+  const [aviso, setAviso] = useState<Aviso | null>(null)
+  const raiz = useRef<HTMLDivElement>(null)
+  const hayVentana = creando !== null || abierta !== null || porConfirmar !== null || configurando
 
-  // Avisos breves (por ej., si el servidor rechaza un movimiento).
+  // Los avisos se van solos.
   useEffect(() => {
     if (!aviso) return
-    const t = setTimeout(() => setAviso(null), 6000)
+    const t = setTimeout(() => setAviso(null), aviso.accion ? 9000 : 6000)
     return () => clearTimeout(t)
   }, [aviso])
 
@@ -78,44 +118,136 @@ export function PantallaPrincipal() {
     return aplicarEnCurso(nuevas.length > 0 ? [...reales, ...nuevas] : reales)
   }, [matriz.data, provisorias, aplicarEnCurso])
 
+  const conectado = conexion !== 'sin_conexion'
+  const sinConexion = () =>
+    setAviso({ tipo: 'error', texto: 'Sin conexión: no se puede guardar hasta que vuelva.' })
+
+  /** "Copiar mensaje" y "Copiar teléfono" (especificación 6.7). */
+  const copiar = async (t: RefTarea, que: 'mensaje' | 'telefono') => {
+    const texto =
+      que === 'telefono'
+        ? (t.cliente?.telefono ?? '')
+        : armarMensaje(matriz.data?.config.plantilla ?? '', {
+            nombre: t.cliente?.nombre ?? null,
+            trabajo: t.titulo,
+            saldo: t.saldo,
+          })
+    const ok = await copiarTexto(texto)
+    setAviso(
+      ok
+        ? { tipo: 'ok', texto: que === 'telefono' ? 'Teléfono copiado' : 'Mensaje copiado' }
+        : { tipo: 'error', texto: 'No se pudo copiar. Probá de nuevo.' },
+    )
+  }
+
+  const devolver = (t: RefTarea) => {
+    if (!conectado) return sinConexion()
+    cambiarEstado
+      .mutateAsync({ id: t.id, cambio: 'devolver', tipo: t.tipo })
+      .then(() => setAviso({ tipo: 'ok', texto: `"${t.titulo}" volvió a su estado anterior` }))
+      .catch((e: unknown) =>
+        setAviso({ tipo: 'error', texto: `No se pudo devolver "${t.titulo}": ${mensaje(e)}` }),
+      )
+  }
+
+  const ejecutar = (accion: AccionTarea, t: RefTarea) => {
+    if (accion === 'abrir') return setAbierta(t.id)
+    if (accion === 'copiar-mensaje') return void copiar(t, 'mensaje')
+    if (accion === 'copiar-telefono') return void copiar(t, 'telefono')
+    if (accion === 'devolver') return devolver(t)
+    if (!conectado) return sinConexion()
+    setPorConfirmar({ accion, tarea: t })
+  }
+
+  const confirmar = () => {
+    if (!porConfirmar) return
+    const { accion, tarea: t } = porConfirmar
+    setPorConfirmar(null)
+    if (accion === 'eliminar') {
+      if (abierta === t.id) setAbierta(null)
+      eliminar
+        .mutateAsync(t.id)
+        .catch((e: unknown) =>
+          setAviso({ tipo: 'error', texto: `No se pudo eliminar "${t.titulo}": ${mensaje(e)}` }),
+        )
+      return
+    }
+    if (accion === 'terminar' && matriz.data?.config.confeti && raiz.current) {
+      // Confeti azul y blanco desde la tarjeta (o desde el centro).
+      const globo = raiz.current.querySelector(`[data-tarea-id="${CSS.escape(t.id)}"]`)
+      const caja = globo?.getBoundingClientRect()
+      lanzarConfeti(
+        caja
+          ? { x: caja.left + caja.width / 2, y: caja.top + caja.height / 2 }
+          : { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+        raiz.current,
+      )
+    }
+    if (accion === 'entregar' && abierta === t.id) setAbierta(null)
+    cambiarEstado
+      .mutateAsync({ id: t.id, cambio: accion, tipo: t.tipo })
+      .then(() => {
+        if (accion === 'entregar') {
+          setAviso({ tipo: 'ok', texto: `"${t.titulo}" pasó a Entregados del día` })
+        } else if (t.tipo === 'pedido') {
+          // Al terminar un pedido, el mensaje para avisar al cliente queda a mano.
+          setAviso({
+            tipo: 'ok',
+            texto: `"${t.titulo}" terminada`,
+            accion: { texto: 'Copiar mensaje', hacer: () => void copiar(t, 'mensaje') },
+          })
+        } else {
+          setAviso({ tipo: 'ok', texto: `"${t.titulo}" pasó a Hechas hoy` })
+        }
+      })
+      .catch((e: unknown) =>
+        setAviso({ tipo: 'error', texto: `No se pudo guardar "${t.titulo}": ${mensaje(e)}` }),
+      )
+  }
+
   // Lo necesario para soltar, siempre al día (la función de soltar se crea una vez).
-  const actual = useRef({ tareas, matriz: matriz.data, ahora, conectado: true })
+  const actual = useRef({
+    tareas,
+    hechas: hechas.data,
+    matriz: matriz.data,
+    ahora,
+    conectado,
+    devolver,
+    pedirEliminar: (t: RefTarea) => setPorConfirmar({ accion: 'eliminar', tarea: t }),
+  })
   useEffect(() => {
-    actual.current = { tareas, matriz: matriz.data, ahora, conectado: conexion !== 'sin_conexion' }
+    actual.current = { ...actual.current, tareas, hechas: hechas.data, matriz: matriz.data }
+    actual.current.ahora = ahora
+    actual.current.conectado = conectado
+    actual.current.devolver = devolver
   })
 
   const soltar = useCallback(
-    (id: string, destino: Destino) => {
-      const { tareas, matriz, ahora, conectado } = actual.current
+    (id: string, destino: Destino, origen: Origen) => {
+      const { tareas, hechas, matriz, ahora, conectado, devolver, pedirEliminar } = actual.current
       if (!conectado) {
-        setAviso('Sin conexión: no se puede mover ni eliminar hasta que vuelva.')
+        setAviso({ tipo: 'error', texto: 'Sin conexión: no se puede guardar hasta que vuelva.' })
         return
       }
-      if (destino.tipo === 'papelera') {
-        setAEliminar(id)
-        return
-      }
-      const tarea = tareas.find((t) => t.id === id)
-      if (!tarea || !matriz) return
+      const delPanel = [...(hechas?.terminadas ?? []), ...(hechas?.entregadas ?? [])].find(
+        (t) => t.id === id,
+      )
+      const tarea = origen === 'panel' ? delPanel : tareas.find((t) => t.id === id)
+      if (!tarea) return
+      if (destino.tipo === 'papelera') return pedirEliminar(tarea)
+      // Del panel "Hechas hoy" a la matriz: vuelve a su estado anterior.
+      if (origen === 'panel') return devolver(tarea)
+      if (!matriz) return
       const cambio = movimiento(tarea, destino.id, matriz.config.umbrales, ahora)
       if (!cambio) return
       mover
         .mutateAsync({ id, ...cambio })
-        .catch((e: unknown) => setAviso(`No se pudo mover "${tarea.titulo}": ${mensaje(e)}`))
+        .catch((e: unknown) =>
+          setAviso({ tipo: 'error', texto: `No se pudo mover "${tarea.titulo}": ${mensaje(e)}` }),
+        )
     },
     [mover],
   )
-
-  const confirmarEliminar = () => {
-    const id = aEliminar
-    if (!id) return
-    const titulo = tareas.find((t) => t.id === id)?.titulo ?? 'la tarea'
-    setAEliminar(null)
-    if (abierta === id) setAbierta(null)
-    eliminar
-      .mutateAsync(id)
-      .catch((e: unknown) => setAviso(`No se pudo eliminar "${titulo}": ${mensaje(e)}`))
-  }
 
   // Atajos: N = tarea rápida, O = orden de trabajo (especificación 7.5).
   useEffect(() => {
@@ -149,50 +281,75 @@ export function PantallaPrincipal() {
     onGuardar: guardarNueva,
     onCerrar: () => setCreando(null),
   }
+  const confirmacion = porConfirmar ? CONFIRMACIONES[porConfirmar.accion] : null
 
   return (
     <ContextoConexion.Provider value={conexion}>
-      <ProveedorArrastre onSoltar={soltar}>
-        <Matriz tareas={tareas} config={matriz.data.config} ahora={ahora} onAbrir={setAbierta} />
-        <Controles
-          onCrear={() => setCreando({ formulario: 'rapida' })}
-          onCrearOT={() => setCreando({ formulario: 'ot' })}
-          onConfigurar={() => setConfigurando(true)}
-        />
-      </ProveedorArrastre>
-      <IndicadorConexion estado={conexion} />
-      {aviso && (
-        <p className="co-aviso-flotante" role="alert">
-          {aviso}
-        </p>
-      )}
+      <ContextoAcciones.Provider value={ejecutar}>
+        <div ref={raiz} className="co-contenido">
+          <ProveedorArrastre onSoltar={soltar}>
+            <Matriz
+              tareas={tareas}
+              config={matriz.data.config}
+              ahora={ahora}
+              onAbrir={setAbierta}
+            />
+            <Controles
+              onCrear={() => setCreando({ formulario: 'rapida' })}
+              onCrearOT={() => setCreando({ formulario: 'ot' })}
+              onConfigurar={() => setConfigurando(true)}
+            />
+            <PanelHechas hechas={hechas.data} ejecutar={ejecutar} onAbrir={setAbierta} />
+          </ProveedorArrastre>
+          <IndicadorConexion estado={conexion} />
+          {aviso && (
+            <div
+              className={`co-aviso-flotante co-aviso-flotante--${aviso.tipo}`}
+              role={aviso.tipo === 'error' ? 'alert' : 'status'}
+            >
+              <span>{aviso.texto}</span>
+              {aviso.accion && (
+                <button
+                  type="button"
+                  className="co-boton-sutil"
+                  onClick={() => {
+                    aviso.accion?.hacer()
+                  }}
+                >
+                  {aviso.accion.texto}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-      {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
-      {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
-      {abierta && (
-        <DetalleTarea
-          id={abierta}
-          ahora={ahora}
-          umbrales={matriz.data.config.umbrales}
-          onCerrar={() => setAbierta(null)}
-          onEliminar={setAEliminar}
-        />
-      )}
-      {aEliminar && (
-        <Confirmacion
-          titulo="¿Eliminar esta tarea?"
-          texto="Podrás recuperarla desde Configuración › Papelera durante 30 días."
-          confirmar="Eliminar"
-          peligro
-          onCancelar={() => setAEliminar(null)}
-          onConfirmar={confirmarEliminar}
-        />
-      )}
-      {configurando && (
-        <Suspense fallback={null}>
-          <Configuracion ahora={ahora} onCerrar={() => setConfigurando(false)} />
-        </Suspense>
-      )}
+        {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
+        {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
+        {abierta && (
+          <DetalleTarea
+            id={abierta}
+            ahora={ahora}
+            umbrales={matriz.data.config.umbrales}
+            onCerrar={() => setAbierta(null)}
+            onAccion={ejecutar}
+          />
+        )}
+        {porConfirmar && confirmacion && (
+          <Confirmacion
+            titulo={confirmacion.titulo}
+            texto={confirmacion.texto}
+            confirmar={confirmacion.confirmar}
+            peligro={porConfirmar.accion === 'eliminar'}
+            onCancelar={() => setPorConfirmar(null)}
+            onConfirmar={confirmar}
+          />
+        )}
+        {configurando && (
+          <Suspense fallback={null}>
+            <Configuracion ahora={ahora} onCerrar={() => setConfigurando(false)} />
+          </Suspense>
+        )}
+      </ContextoAcciones.Provider>
     </ContextoConexion.Provider>
   )
 }

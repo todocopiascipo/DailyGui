@@ -15,6 +15,11 @@ const base: TareaMatriz = {
   motivo_espera: null,
   motivo_espera_detalle: null,
   fecha_entrega: '2026-11-06T18:00:00-03:00',
+  estado_anterior: null,
+  terminada_at: null,
+  entregada_at: null,
+  saldo: 0,
+  cliente: null,
   responsables: [
     { id: 'a', nombre: 'Juan', iniciales: 'J' },
     { id: 'b', nombre: 'Ana', iniciales: 'A' },

@@ -216,6 +216,13 @@ export function tareaProvisoria(
     motivo_espera: c.motivo_espera,
     motivo_espera_detalle: c.motivo_espera_detalle,
     fecha_entrega: c.fecha_entrega,
+    estado_anterior: null,
+    terminada_at: null,
+    entregada_at: null,
+    saldo: c.saldo,
+    cliente: b.cliente.nombre_apellido.trim()
+      ? { nombre: b.cliente.nombre_apellido.trim(), telefono: b.cliente.telefono.trim() || null }
+      : null,
     responsables: personas.filter((p) => ids.has(p.id)),
     subtareas: { total: conTitulo.length, hechas: 0 },
   }

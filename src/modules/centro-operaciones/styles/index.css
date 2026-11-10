@@ -18,6 +18,7 @@
 @import './formularios.css';
 @import './interaccion.css';
 @import './ot.css';
+@import './ciclo.css';
 
 /*
  * Conecta los tokens de marca con las utilidades de Tailwind.

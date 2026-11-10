@@ -5,6 +5,7 @@ import {
   cargarCatalogos,
   cargarDetalle,
   cargarMatriz,
+  cargarHechas,
   cargarPapelera,
 } from './consultas.ts'
 import type { BaseDeDatos } from './db.ts'
@@ -14,7 +15,11 @@ import {
   actualizarTarea,
   borrarDefinitiva,
   diasPapelera,
+  devolverTarea,
   eliminarTarea,
+  entregarTarea,
+  guardarConfiguracion,
+  terminarTarea,
   restaurarTarea,
   crearPersona,
   crearSubtarea,
@@ -29,6 +34,7 @@ import {
   validarEdicionTarea,
   validarNuevaPersona,
   validarNuevaSubtarea,
+  validarConfiguracion,
   validarNuevaTarea,
 } from './validar.ts'
 
@@ -49,6 +55,38 @@ const RUTAS: [string, string, Manejador][] = [
   ['GET', '/api/matriz', ({ db }) => cargarMatriz(db)],
   ['GET', '/api/catalogos', ({ db }) => cargarCatalogos(db)],
   ['GET', '/api/papelera', ({ db }) => cargarPapelera(db, diasPapelera(db))],
+  [
+    'GET',
+    '/api/hechas',
+    ({ db, query }) => {
+      const desde = query.get('desde') ?? ''
+      if (Number.isNaN(Date.parse(desde))) throw new ErrorValidacion('Falta el comienzo del día')
+      return cargarHechas(db, new Date(desde).toISOString())
+    },
+  ],
+  ...(
+    [
+      ['terminar', terminarTarea],
+      ['entregar', entregarTarea],
+      ['devolver', devolverTarea],
+    ] as const
+  ).map(([accion, operacion]): [string, string, Manejador] => [
+    'POST',
+    `/api/tareas/:id/${accion}`,
+    ({ db, ctx, params }) => {
+      operacion(db, ctx, params.id!)
+      return cargarDetalle(db, params.id!)
+    },
+  ]),
+  [
+    'PUT',
+    '/api/configuracion/:clave',
+    ({ db, params, cuerpo }) => {
+      const valor = validarConfiguracion(params.clave!, cuerpo)
+      guardarConfiguracion(db, params.clave!, valor)
+      return { clave: params.clave, valor }
+    },
+  ],
   [
     'POST',
     '/api/tareas/:id/eliminar',
@@ -190,6 +228,7 @@ function pistaDe(valor: string | null): Pista | undefined {
 /** Qué avisar a las pantallas conectadas después de un cambio que salió bien. */
 function avisoDe(metodo: string, ruta: string, resultado: unknown): Aviso {
   if (ruta.startsWith('/api/personas')) return { recursos: ['personas'] }
+  if (ruta.startsWith('/api/configuracion')) return { recursos: ['configuracion'] }
   const tareaId =
     typeof resultado === 'object' && resultado !== null && 'tarea' in resultado
       ? ((resultado as { tarea: { id?: string } }).tarea.id ?? null)

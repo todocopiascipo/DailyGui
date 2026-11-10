@@ -21,7 +21,7 @@ export function useConectado(): boolean {
 }
 
 interface Aviso {
-  recursos: ('tareas' | 'personas')[]
+  recursos: ('tareas' | 'personas' | 'configuracion')[]
   tarea_id?: string | null
 }
 
@@ -32,6 +32,10 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
       queryKey: aviso.tarea_id ? ['tarea', aviso.tarea_id] : ['tarea'],
     })
     void qc.invalidateQueries({ queryKey: ['papelera'] })
+    void qc.invalidateQueries({ queryKey: ['hechas'] })
+  }
+  if (aviso.recursos.includes('configuracion')) {
+    void qc.invalidateQueries({ queryKey: ['matriz'] })
   }
   if (aviso.recursos.includes('personas')) {
     void qc.invalidateQueries({ queryKey: ['catalogos'] })

@@ -58,7 +58,9 @@ describe('API', () => {
     expect(r.tareas[0]!.responsables).toEqual([{ id: p, nombre: 'Uno', iniciales: 'U' }])
     expect(r.tareas[0]!.subtareas).toEqual({ total: 2, hechas: 0 })
     expect(r.configuracion.map((c) => c.clave).sort()).toEqual([
+      'confeti_activado',
       'disposicion_cuadrantes',
+      'plantilla_mensaje',
       'umbrales_urgencia',
     ])
   })
@@ -359,6 +361,109 @@ describe('API de edición', () => {
       (p: { nombre: string }) => p.nombre,
     )
     expect(nombres).toEqual(['Uno', 'Dos'])
+  })
+
+  it('ciclo completo: terminar, entregar y devolver, con historial', async () => {
+    const id = (
+      await api('POST', '/tareas', {
+        tarea: { titulo: 'Ciclo', importante: true, saldo: 3000 },
+        cliente: { nombre_apellido: 'Cliente Ciclo', telefono: '2990001111' },
+      })
+    ).cuerpo.tarea.id as string
+    const desde = new Date(Date.now() - 3_600_000).toISOString()
+    const hechas = async () =>
+      (await api('GET', `/hechas?desde=${encodeURIComponent(desde)}`)).cuerpo as {
+        terminadas: { id: string }[]
+        entregadas: { id: string }[]
+      }
+
+    // No se entrega sin terminar.
+    expect((await api('POST', `/tareas/${id}/entregar`)).estado).toBe(400)
+
+    const t = await api('POST', `/tareas/${id}/terminar`)
+    expect(t.cuerpo.tarea.estado).toBe('terminada')
+    // Sigue en la matriz (azul) y figura en "Terminadas hoy"; trae cliente y saldo.
+    const m = (await api('GET', '/matriz')).cuerpo.tareas[0]
+    expect(m).toMatchObject({
+      estado: 'terminada',
+      estado_anterior: 'pendiente',
+      saldo: 3000,
+      cliente: { nombre: 'Cliente Ciclo', telefono: '2990001111' },
+    })
+    expect((await hechas()).terminadas.map((x) => x.id)).toEqual([id])
+    expect((await api('POST', `/tareas/${id}/terminar`)).estado).toBe(400)
+
+    await api('POST', `/tareas/${id}/entregar`)
+    expect((await api('GET', '/matriz')).cuerpo.tareas).toEqual([])
+    expect(await hechas()).toMatchObject({ terminadas: [], entregadas: [{ id }] })
+
+    // Devolver: de entregada a terminada, y otra vez a la matriz.
+    const d = await api('POST', `/tareas/${id}/devolver`)
+    expect(d.cuerpo.tarea.estado).toBe('terminada')
+    expect((await api('GET', '/matriz')).cuerpo.tareas).toHaveLength(1)
+
+    const acciones = d.cuerpo.eventos.map((e: { accion: string }) => e.accion)
+    expect(acciones).toEqual(['devuelta', 'estado', 'estado', 'creada'])
+  })
+
+  it('internas: terminar las saca de la matriz y no se entregan', async () => {
+    const id = (
+      await api('POST', '/tareas', {
+        tarea: { titulo: 'Interna', importante: true, tipo: 'interna' },
+      })
+    ).cuerpo.tarea.id as string
+    await api('POST', `/tareas/${id}/terminar`)
+    expect((await api('GET', '/matriz')).cuerpo.tareas).toEqual([])
+    expect((await api('POST', `/tareas/${id}/entregar`)).estado).toBe(400)
+    const desde = new Date(Date.now() - 60_000).toISOString()
+    const h = (await api('GET', `/hechas?desde=${encodeURIComponent(desde)}`)).cuerpo
+    expect(h.terminadas.map((x: { titulo: string }) => x.titulo)).toEqual(['Interna'])
+    // Lo de ayer no aparece.
+    const manana = new Date(Date.now() + 60_000).toISOString()
+    expect(
+      (await api('GET', `/hechas?desde=${encodeURIComponent(manana)}`)).cuerpo.terminadas,
+    ).toEqual([])
+  })
+
+  it('devolver siempre va hacia atrás: entregada → terminada → en curso', async () => {
+    const id = (await api('POST', '/tareas', { tarea: { titulo: 'Atrás', importante: true } }))
+      .cuerpo.tarea.id as string
+    await api('PATCH', `/tareas/${id}`, { cambios: { estado: 'en_proceso' } })
+    await api('POST', `/tareas/${id}/terminar`)
+    await api('POST', `/tareas/${id}/entregar`)
+    expect((await api('POST', `/tareas/${id}/devolver`)).cuerpo.tarea.estado).toBe('terminada')
+    // Ya no se recuerda en estado_anterior (dice "entregada"): sale del historial.
+    expect((await api('POST', `/tareas/${id}/devolver`)).cuerpo.tarea.estado).toBe('en_proceso')
+    // De en proceso (que venía de terminada) no se "devuelve" a terminada.
+    expect((await api('POST', `/tareas/${id}/devolver`)).estado).toBe(400)
+  })
+
+  it('devolver a "en espera" conserva el motivo', async () => {
+    const id = (await api('POST', '/tareas', { tarea: { titulo: 'Espera', importante: true } }))
+      .cuerpo.tarea.id as string
+    await api('PATCH', `/tareas/${id}`, { cambios: { estado: 'en_espera', motivo_espera: 'pago' } })
+    await api('POST', `/tareas/${id}/terminar`)
+    const d = await api('POST', `/tareas/${id}/devolver`)
+    expect(d.cuerpo.tarea).toMatchObject({ estado: 'en_espera', motivo_espera: 'pago' })
+    const nueva = (await api('POST', '/tareas', { tarea: { titulo: 'Nueva', importante: true } }))
+      .cuerpo.tarea.id as string
+    expect((await api('POST', `/tareas/${nueva}/devolver`)).estado).toBe(400)
+  })
+
+  it('configuración: confeti y plantilla, validados', async () => {
+    expect((await api('PUT', '/configuracion/confeti_activado', { valor: false })).estado).toBe(200)
+    expect(
+      (await api('PUT', '/configuracion/plantilla_mensaje', { valor: 'Hola {nombre}' })).estado,
+    ).toBe(200)
+    const config = (await api('GET', '/matriz')).cuerpo.configuracion as {
+      clave: string
+      valor: unknown
+    }[]
+    expect(config.find((c) => c.clave === 'confeti_activado')!.valor).toBe(false)
+    expect(config.find((c) => c.clave === 'plantilla_mensaje')!.valor).toBe('Hola {nombre}')
+    expect((await api('PUT', '/configuracion/confeti_activado', { valor: 'no' })).estado).toBe(400)
+    expect((await api('PUT', '/configuracion/plantilla_mensaje', { valor: '' })).estado).toBe(400)
+    expect((await api('PUT', '/configuracion/papelera_dias', { valor: 1 })).estado).toBe(404)
   })
 
   it('rechaza datos inválidos sin guardar nada', async () => {

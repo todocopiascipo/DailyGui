@@ -38,6 +38,12 @@ En la matriz:
 - **Ver y editar una tarea:** tocar su globo. Las subtareas se guardan al
   momento; el resto, con "Guardar cambios".
 - Las personas del equipo se agregan con "+ Persona" dentro del formulario.
+- **Terminar y entregar:** desde el menú de tres puntitos de cada globo (o el
+  detalle). Al terminar, la tarjeta queda azul con el botón "Entregada"; al
+  entregarla, sale de la matriz. El menú también tiene "Devolver al estado
+  anterior", "Copiar mensaje" (para WhatsApp) y "Copiar teléfono".
+- **Hechas hoy:** acercando el mouse al borde derecho (o la pestaña del borde
+  en el iPad): lo terminado y lo entregado en el día, con "Devolver".
 - **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en
   menos de un segundo. Si se corta la conexión con la PC del local aparece
   "Sin conexión · reconectando" abajo a la izquierda y no se puede guardar
@@ -61,7 +67,9 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `GET /api/clientes?telefono=`, `POST /api/personas`, `POST /api/tareas`,
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
-  `POST /api/tareas/:id/eliminar|restaurar`, `DELETE /api/tareas/:id` (solo
+  `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
+  `GET /api/hechas?desde=`, `PUT /api/configuracion/:clave` (confeti y
+  plantilla), `DELETE /api/tareas/:id` (solo
   desde la papelera). Todo lo que llega se valida en
   `server/validar.ts`.
 

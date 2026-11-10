@@ -1,6 +1,9 @@
 import { createContext, useContext } from 'react'
 import type { Cuadrante } from '../../lib/urgencia'
 
+/** De dónde se levantó: la matriz o el panel "Hechas hoy" (para devolver). */
+export type Origen = 'matriz' | 'panel'
+
 export type Destino = { tipo: 'cuadrante'; id: Cuadrante } | { tipo: 'papelera' }
 
 /** Lo que se dibuja del globo levantado. */
@@ -19,7 +22,7 @@ export interface Arrastre {
 }
 
 export interface Contexto extends Arrastre {
-  presionar: (e: React.PointerEvent<HTMLElement>, id: string) => void
+  presionar: (e: React.PointerEvent<HTMLElement>, id: string, origen?: Origen) => void
 }
 
 export const ContextoArrastre = createContext<Contexto | null>(null)

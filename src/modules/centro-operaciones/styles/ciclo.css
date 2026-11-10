@@ -1,0 +1,292 @@
+/* =============================================================================
+ * Ciclo terminar / entregar, menú de tres puntitos, panel "Hechas hoy",
+ * confeti y avisos (especificación 6.4, 6.7, 7.2, 7.8)
+ * ========================================================================== */
+
+.co-contenido {
+  position: relative;
+  height: 100%;
+}
+
+/* ---------- Menú de tres puntitos ---------- */
+/* Lugar para el botón, sin tapar el título. */
+.co-globo__cabecera {
+  padding-right: 26px;
+}
+.co-globo__puntos {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(10 16 50 / 0.35);
+  color: var(--co-blanco);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background 150ms ease;
+}
+.co-globo:hover .co-globo__puntos,
+.co-globo:focus-within .co-globo__puntos,
+.co-globo__puntos[aria-expanded='true'] {
+  opacity: 1;
+}
+.co-globo__puntos:hover {
+  background: rgb(10 16 50 / 0.6);
+}
+/* En táctil no hay "hover": el botón queda a la vista, tenue. */
+@media (hover: none) {
+  .co-globo__puntos {
+    opacity: 0.75;
+  }
+}
+.co-globo--mini .co-globo__puntos {
+  top: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+}
+
+.co-menu {
+  position: fixed;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 18px;
+  background: rgb(26 34 92 / 0.97);
+  box-shadow: 0 20px 40px -16px rgb(0 0 20 / 0.7);
+  animation: co-velo-entra 120ms ease-out both;
+}
+.co-menu__item {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--co-blanco);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.co-menu__item:hover,
+.co-menu__item:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+  outline-offset: -2px;
+}
+.co-menu__item--peligro {
+  color: #ffc2c2;
+}
+
+/* "Entregada" en la tarjeta azul de un pedido terminado. */
+.co-globo__accion {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--co-radius-pill);
+  background: var(--co-blanco);
+  color: var(--co-azul-principal);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.co-globo__accion:hover {
+  background: #e6eefb;
+}
+
+/* Botones de estado en el detalle. */
+.co-acciones-estado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--co-space-1);
+}
+
+/* ---------- Confeti ---------- */
+.co-confeti {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---------- Avisos ---------- */
+.co-aviso-flotante {
+  display: flex;
+  align-items: center;
+  gap: var(--co-space-2);
+}
+.co-aviso-flotante--ok {
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(26 34 92 / 0.95);
+}
+.co-aviso-flotante--error {
+  background: rgb(150 30 40 / 0.92);
+}
+.co-aviso-flotante .co-boton-sutil {
+  flex: none;
+}
+
+/* ---------- Panel "Hechas hoy" ---------- */
+/* Zona invisible del borde derecho: el mouse lo abre. */
+.co-borde-derecho {
+  position: absolute;
+  top: 80px;
+  right: 0;
+  bottom: 80px;
+  z-index: 20;
+  width: 12px;
+}
+@media (hover: none) {
+  .co-borde-derecho {
+    display: none;
+  }
+}
+/* Pestaña casi transparente (táctil y teclado). */
+.co-pestana-hechas {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 32px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(255 255 255 / 0.7);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.co-pestana-hechas:hover {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--co-blanco);
+}
+.co-pestana-hechas__cuenta {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.co-panel-hechas {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-2);
+  width: min(380px, 100%);
+  padding: var(--co-space-2) var(--co-space-3) var(--co-space-3);
+  overflow-y: auto;
+  border-left: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 28px 0 0 28px;
+  background: linear-gradient(160deg, rgb(30 46 112), rgb(30 30 84));
+  box-shadow: -24px 0 48px -24px rgb(0 0 20 / 0.6);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 240ms ease,
+    visibility 0s linear 240ms;
+}
+.co-panel-hechas[data-abierto] {
+  transform: none;
+  visibility: visible;
+  transition: transform 240ms ease;
+}
+.co-panel-hechas__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.co-hechas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-hechas__item {
+  display: flex;
+  align-items: center;
+  gap: var(--co-space-1);
+  padding: 6px 6px 6px 4px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.05);
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.co-hechas__item[data-arrastrando] {
+  opacity: 0.3;
+}
+.co-hechas__titulo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--co-blanco);
+  text-align: left;
+  cursor: pointer;
+}
+.co-hechas__titulo strong {
+  overflow-wrap: anywhere;
+}
+.co-hechas__titulo:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+@media (max-width: 639px) {
+  .co-panel-hechas {
+    width: 100%;
+    border-radius: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .co-panel-hechas,
+  .co-panel-hechas[data-abierto] {
+    transition: none;
+  }
+}
+
+/* ---------- Configuración ---------- */
+.co-interruptor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.co-interruptor input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--co-blanco);
+  cursor: pointer;
+}

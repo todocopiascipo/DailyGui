@@ -4,7 +4,7 @@
  */
 import type { Tarea } from './reglas.ts'
 import type { CambiosTarea, DatosCliente, DatosNuevaTarea, ExtrasEdicion } from './servicio.ts'
-import { ErrorValidacion } from './servicio.ts'
+import { ErrorNoEncontrado, ErrorValidacion } from './servicio.ts'
 
 type Objeto = Record<string, unknown>
 
@@ -197,4 +197,12 @@ export function validarNuevaPersona(cuerpo: unknown) {
   const o = objeto(cuerpo, 'Persona')
   const iniciales = textoOpcional(o.iniciales, 'Iniciales', 4)
   return { nombre: texto(o.nombre, 'Nombre', 60), iniciales }
+}
+
+/** Claves de configuración que se pueden cambiar desde la app, con su validación. */
+export function validarConfiguracion(clave: string, cuerpo: unknown): unknown {
+  const o = objeto(cuerpo, 'Configuración')
+  if (clave === 'confeti_activado') return booleano(o.valor, 'Confeti')
+  if (clave === 'plantilla_mensaje') return texto(o.valor, 'Plantilla del mensaje', 500)
+  throw new ErrorNoEncontrado('Esa configuración no se puede cambiar')
 }

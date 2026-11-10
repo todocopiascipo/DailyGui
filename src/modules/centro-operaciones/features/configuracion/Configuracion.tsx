@@ -1,5 +1,5 @@
 /**
- * Configuración (especificación 7.12). Por ahora solo la Papelera
+ * Configuración (especificación 7.12). Por ahora: confeti, mensaje para copiar y Papelera
  * (especificación 6.5): restaurar o borrar definitivamente. El resto de las
  * opciones llega en la Fase 9. Se carga diferido: no pesa en la pantalla principal.
  */
@@ -13,6 +13,7 @@ import { useConectado } from '../../lib/tiempoReal'
 import { AvisoSinConexion } from '../tarea/AvisoSinConexion'
 import { Confirmacion } from '../tarea/Confirmacion'
 import { Dialogo } from '../tarea/Dialogo'
+import { SeccionAvisos } from './Avisos'
 
 interface TareaPapelera {
   id: string
@@ -56,7 +57,8 @@ export default function Configuracion({ ahora, onCerrar }: { ahora: Date; onCerr
     <>
       <Dialogo titulo="Configuración" variante="lateral" sinGuardar={false} onCerrar={onCerrar}>
         <AvisoSinConexion />
-        <section className="co-seccion co-seccion--primera" aria-labelledby="co-titulo-papelera">
+        <SeccionAvisos />
+        <section className="co-seccion" aria-labelledby="co-titulo-papelera">
           <h3 id="co-titulo-papelera" className="co-subtitulo">
             Papelera
           </h3>

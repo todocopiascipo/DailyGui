@@ -489,6 +489,92 @@ export function crearPersona(
 }
 
 // ---------------------------------------------------------------------------
+// Ciclo terminar / entregar / devolver (especificación 6.4)
+// ---------------------------------------------------------------------------
+
+const ACTIVOS = ['pendiente', 'en_proceso', 'en_espera']
+
+function activa(db: BaseDeDatos, id: string): Tarea {
+  const t = leerTarea(db, id)
+  if (!t || t.eliminada_at) throw new ErrorNoEncontrado('La tarea no existe')
+  return t
+}
+
+/** Terminar: solo desde un estado activo. El motivo de espera se conserva para "Devolver". */
+export function terminarTarea(db: BaseDeDatos, ctx: Contexto, id: string): Tarea {
+  const t = activa(db, id)
+  if (!ACTIVOS.includes(t.estado)) throw new ErrorValidacion('La tarea ya no está en curso')
+  return actualizarTarea(db, ctx, id, { estado: 'terminada' })
+}
+
+/** Entregada: solo pedidos terminados (las internas no tienen este paso). */
+export function entregarTarea(db: BaseDeDatos, ctx: Contexto, id: string): Tarea {
+  const t = activa(db, id)
+  if (t.tipo !== 'pedido') throw new ErrorValidacion('Las tareas internas no se entregan')
+  if (t.estado !== 'terminada') throw new ErrorValidacion('Primero hay que terminarla')
+  return actualizarTarea(db, ctx, id, { estado: 'entregada' })
+}
+
+/**
+ * Estado en curso que tenía la tarea antes de terminarla (según el historial).
+ * Sirve cuando `estado_anterior` ya no lo dice (por ej., entregada → devuelta).
+ */
+function estadoAntesDeTerminar(db: BaseDeDatos, id: string): Tarea['estado'] | null {
+  const filas = db
+    .prepare(
+      `SELECT cambios FROM eventos
+       WHERE tarea_id = ? AND accion IN ('estado', 'devuelta')
+       ORDER BY created_at DESC, rowid DESC`,
+    )
+    .all(id) as { cambios: string }[]
+  for (const f of filas) {
+    const c = (JSON.parse(f.cambios) as { estado?: { antes?: string; despues?: string } }).estado
+    if (c?.despues === 'terminada' && c.antes && ACTIVOS.includes(c.antes)) {
+      return c.antes as Tarea['estado']
+    }
+  }
+  return null
+}
+
+/**
+ * "Devolver al estado anterior": siempre hacia atrás en el ciclo.
+ * Entregada → terminada; terminada → el estado en curso que tenía; en curso →
+ * el estado en curso anterior. Queda "devuelta" en el historial.
+ */
+export function devolverTarea(db: BaseDeDatos, ctx: Contexto, id: string): Tarea {
+  const t = activa(db, id)
+  let estado: Tarea['estado'] | null
+  if (t.estado === 'entregada') estado = 'terminada'
+  else if (t.estado === 'terminada') {
+    estado =
+      t.estado_anterior && ACTIVOS.includes(t.estado_anterior)
+        ? t.estado_anterior
+        : (estadoAntesDeTerminar(db, id) ?? 'pendiente')
+  } else {
+    estado =
+      t.estado_anterior && ACTIVOS.includes(t.estado_anterior) && t.estado_anterior !== t.estado
+        ? t.estado_anterior
+        : null
+  }
+  if (!estado) throw new ErrorValidacion('No hay un estado anterior al que volver')
+  // Si vuelve a "en espera" sin motivo guardado, queda pendiente.
+  if (estado === 'en_espera' && !t.motivo_espera) estado = 'pendiente'
+  return actualizarTarea(db, { ...ctx, pista: 'devuelta' }, id, { estado })
+}
+
+// ---------------------------------------------------------------------------
+// Configuración editable desde la app (lo demás llega en la Fase 9)
+// ---------------------------------------------------------------------------
+
+/** Guarda un valor de configuración ya validado. */
+export function guardarConfiguracion(db: BaseDeDatos, clave: string, valor: unknown): void {
+  db.prepare(
+    `INSERT INTO configuracion (clave, valor) VALUES (?, ?)
+     ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor`,
+  ).run(clave, JSON.stringify(valor))
+}
+
+// ---------------------------------------------------------------------------
 // Papelera (especificación 6.5): borrado lógico, restaurar, borrado definitivo
 // y purga automática pasado el plazo configurable.
 // ---------------------------------------------------------------------------

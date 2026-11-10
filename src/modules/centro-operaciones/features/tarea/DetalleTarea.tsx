@@ -1,4 +1,10 @@
-import { Trash2 } from 'lucide-react'
+import { Copy, Trash2 } from 'lucide-react'
+import {
+  accionesDisponibles,
+  NOMBRES_ACCION,
+  type EjecutarAccion,
+  type RefTarea,
+} from '../matriz/accionesTarea'
 import { formatInTimeZone } from 'date-fns-tz'
 import { useEffect, useId, useRef, useState } from 'react'
 import { aIso } from '../../lib/fechas'
@@ -31,11 +37,11 @@ interface Props {
   umbrales: Umbrales
   onCerrar: () => void
   /** Pide eliminar (con confirmación): la manda a la papelera. */
-  onEliminar?: (id: string) => void
+  onAccion?: EjecutarAccion
 }
 
 /** Detalle de la tarea (especificación 7.4): consultar y modificar todo. */
-export function DetalleTarea({ id, ahora, umbrales, onCerrar, onEliminar }: Props) {
+export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion }: Props) {
   const detalle = useDetalle(id)
   if (!detalle.data) {
     return (
@@ -56,7 +62,7 @@ export function DetalleTarea({ id, ahora, umbrales, onCerrar, onEliminar }: Prop
       ahora={ahora}
       umbrales={umbrales}
       onCerrar={onCerrar}
-      onEliminar={onEliminar}
+      onAccion={onAccion}
     />
   )
 }
@@ -68,13 +74,13 @@ function Editor({
   ahora,
   umbrales,
   onCerrar,
-  onEliminar,
+  onAccion,
 }: {
   detalle: Detalle
   ahora: Date
   umbrales: Umbrales
   onCerrar: () => void
-  onEliminar?: (id: string) => void
+  onAccion?: EjecutarAccion
 }) {
   const idForm = useId()
   const catalogos = useCatalogos()
@@ -130,6 +136,21 @@ function Editor({
   const estimada = urgenciaEstimada(entregaIso ? new Date(entregaIso) : null, ahora, umbrales)
   const t = detalle.tarea
   const estadoEditable = (ESTADOS_EDITABLES as readonly string[]).includes(b.estado)
+  // Lo guardado (no lo que se está editando) define qué acciones de estado hay.
+  const ref: RefTarea = {
+    id: t.id,
+    tipo: t.tipo,
+    titulo: t.titulo,
+    estado: t.estado,
+    estado_anterior: t.estado_anterior,
+    saldo: t.saldo,
+    cliente: detalle.cliente
+      ? { nombre: detalle.cliente.nombre_apellido, telefono: detalle.cliente.telefono }
+      : null,
+  }
+  const accionesEstado = accionesDisponibles(ref).filter((a) =>
+    ['terminar', 'entregar', 'devolver'].includes(a),
+  )
 
   return (
     <Dialogo
@@ -140,12 +161,12 @@ function Editor({
       onCerrar={onCerrar}
       pie={
         <>
-          {onEliminar && (
+          {onAccion && (
             <button
               type="button"
               className="co-boton-sutil co-boton-sutil--peligro co-pie-izquierda"
               disabled={!conectado}
-              onClick={() => onEliminar(detalle.tarea.id)}
+              onClick={() => onAccion('eliminar', ref)}
             >
               <Trash2 size={14} aria-hidden /> Eliminar
             </button>
@@ -172,6 +193,21 @@ function Editor({
       }
     >
       <AvisoSinConexion />
+      {onAccion && accionesEstado.length > 0 && (
+        <div className="co-acciones-estado" role="group" aria-label="Acciones de estado">
+          {accionesEstado.map((a) => (
+            <button
+              key={a}
+              type="button"
+              className={a === 'devolver' ? 'co-boton-sutil' : 'co-boton'}
+              disabled={!conectado}
+              onClick={() => onAccion(a, ref)}
+            >
+              {NOMBRES_ACCION[a]}
+            </button>
+          ))}
+        </div>
+      )}
       <form id={idForm} className="co-formulario" onSubmit={guardar} noValidate>
         <Campo etiqueta="Título" error={errores.titulo}>
           {({ id, descripcion }) => (
@@ -306,6 +342,27 @@ function Editor({
               onCambiar={(v) => cambiar('cliente', v)}
               error={errores.cliente}
             />
+            {/* Con lo guardado: el mensaje usa el nombre y el saldo vigentes. */}
+            {onAccion && ref.tipo === 'pedido' && (
+              <div className="co-fila">
+                <button
+                  type="button"
+                  className="co-boton-sutil"
+                  onClick={() => onAccion('copiar-mensaje', ref)}
+                >
+                  <Copy size={14} aria-hidden /> Copiar mensaje
+                </button>
+                {ref.cliente?.telefono && (
+                  <button
+                    type="button"
+                    className="co-boton-sutil"
+                    onClick={() => onAccion('copiar-telefono', ref)}
+                  >
+                    Copiar teléfono
+                  </button>
+                )}
+              </div>
+            )}
             <div className="co-fila co-fila--campos">
               <CampoPago
                 etiqueta="Seña"
