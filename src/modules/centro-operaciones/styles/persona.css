@@ -1,0 +1,377 @@
+/* =============================================================================
+ * "¿Quién soy?", resaltado de tareas propias y "Mis tareas"
+ * (especificación 7.6 y 7.7)
+ * ========================================================================== */
+
+/* ---------- Abajo a la izquierda ---------- */
+.co-persona-activa {
+  position: absolute;
+  bottom: 12px;
+  left: var(--co-space-2);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.co-persona-activa__nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: 220px;
+  padding: 0 16px 0 6px;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: var(--co-radius-pill);
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.92);
+  font-weight: 700;
+  cursor: pointer;
+}
+.co-persona-activa__nombre > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.co-persona-activa__nombre:has(> svg) {
+  padding-left: 14px;
+}
+.co-persona-activa__nombre:hover,
+.co-boton-redondo:hover {
+  background: rgb(255 255 255 / 0.16);
+  color: var(--co-blanco);
+}
+.co-boton-redondo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: var(--co-radius-pill);
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(255 255 255 / 0.85);
+  font-weight: 600;
+  cursor: pointer;
+}
+.co-boton-redondo[aria-pressed='true'] {
+  border-color: var(--co-blanco);
+  color: var(--co-blanco);
+}
+/* El aviso "Sin conexión" se corre arriba de estos controles. */
+.co-sin-conexion {
+  bottom: 70px;
+}
+@media (max-width: 639px) {
+  .co-persona-activa {
+    bottom: 16px;
+    left: 12px;
+  }
+  .co-persona-activa__nombre {
+    max-width: 140px;
+    background: rgb(30 46 112 / 0.92);
+  }
+  .co-boton-redondo--texto {
+    width: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+  .co-boton-redondo {
+    background: rgb(30 46 112 / 0.92);
+  }
+}
+
+/* ---------- Resaltado de las tareas propias ---------- */
+/* Con "filter" (no "opacity"), para no pelear con las animaciones del globo. */
+.co-globo[data-ajena] {
+  filter: opacity(0.42) saturate(0.6);
+}
+.co-globo[data-propia] {
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 0.75),
+    0 8px 24px -12px rgb(10 10 40 / 0.45);
+}
+
+/* ---------- Selector "¿Quién soy?" ---------- */
+.co-personas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--co-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-persona {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--co-blanco);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.co-persona:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.co-persona[aria-pressed='true'] {
+  border-color: var(--co-blanco);
+  background: rgb(255 255 255 / 0.16);
+}
+.co-persona > svg {
+  flex: none;
+  margin-left: auto;
+}
+.co-persona__iniciales {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--co-blanco);
+  color: var(--co-azul-profundo);
+  font-size: 13px;
+  font-weight: 800;
+}
+.co-entrada--pin {
+  max-width: 220px;
+  font-size: 22px;
+  letter-spacing: 0.3em;
+}
+.co-fila--envolver {
+  flex-wrap: wrap;
+}
+
+/* ---------- Ventana amplia ("Mis tareas") ---------- */
+.co-velo--amplia {
+  align-items: center;
+  justify-content: center;
+  padding: var(--co-space-3) var(--co-space-2);
+}
+.co-dialogo--amplia {
+  width: min(980px, 100%);
+  height: min(calc(100dvh - 48px), 920px);
+  border-radius: 28px;
+  animation: co-dialogo-entra 200ms ease-out both;
+}
+@media (max-width: 639px) {
+  .co-velo--amplia {
+    padding: 0;
+  }
+  .co-dialogo--amplia {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+/* ---------- "Mis tareas" ---------- */
+.co-mensaje-vacio {
+  padding: var(--co-space-4) 0;
+  text-align: center;
+  color: rgb(255 255 255 / 0.85);
+}
+.co-ahora {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--co-space-2);
+  padding: var(--co-space-2) var(--co-space-3);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.07);
+}
+.co-ahora > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+@media (max-width: 479px) {
+  .co-ahora {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Línea del día: eje de horas, marca de "ahora" y una fila por tarea. */
+.co-linea {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 0 4px;
+}
+.co-linea__eje {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.2);
+}
+.co-linea__eje span {
+  position: absolute;
+  top: 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: rgb(255 255 255 / 0.75);
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+.co-linea__eje span:first-child {
+  transform: none;
+}
+.co-linea__eje span:last-child {
+  transform: translateX(-100%);
+}
+.co-linea__ahora {
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  z-index: 1;
+  width: 2px;
+  background: var(--co-blanco);
+  pointer-events: none;
+}
+/* La etiqueta "Ahora" va abajo, para no pisar las horas del eje. */
+.co-linea__ahora span {
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.co-linea__fila {
+  position: relative;
+  height: 30px;
+}
+.co-linea__barra {
+  position: absolute;
+  top: 7px;
+  height: 16px;
+  border-radius: var(--co-radius-pill);
+  background: linear-gradient(90deg, #4f8fd9, #174e97);
+}
+.co-linea__barra--marca {
+  top: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--co-blanco);
+  transform: translateX(-50%) rotate(45deg);
+}
+.co-linea__barra--vencida {
+  background: linear-gradient(90deg, rgb(140 20 30), rgb(60 10 18));
+  box-shadow: 0 0 0 1px rgb(255 140 140 / 0.6);
+}
+.co-linea__texto {
+  position: absolute;
+  top: 5px;
+  max-width: 60%;
+  padding-left: 12px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.co-linea__texto--antes {
+  padding-right: 12px;
+  padding-left: 0;
+  text-align: right;
+}
+.co-linea {
+  padding-bottom: 18px;
+}
+
+/* Paso a paso. */
+.co-mis-tareas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-mi-tarea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.05);
+}
+.co-mi-tarea[data-terminada] {
+  background: linear-gradient(135deg, rgb(23 78 151 / 0.6), rgb(44 42 105 / 0.6));
+}
+.co-mi-tarea__cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--co-space-1);
+}
+.co-mi-tarea__titulo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--co-blanco);
+  text-align: left;
+  cursor: pointer;
+}
+.co-mi-tarea__titulo:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+.co-pasos {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid rgb(255 255 255 / 0.15);
+  list-style: none;
+}
+.co-paso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--co-space-1);
+  min-height: 44px;
+  padding: 0 6px;
+}
+.co-paso__etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+.co-paso__titulo {
+  overflow-wrap: anywhere;
+}
+.co-paso[data-hecha] .co-paso__titulo {
+  text-decoration: line-through;
+  color: rgb(255 255 255 / 0.7);
+}
+.co-paso__quien {
+  flex: none;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.75);
+}
+.co-paso[data-mio] .co-paso__quien {
+  font-weight: 800;
+  color: var(--co-blanco);
+}

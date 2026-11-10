@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { limpiar, unico } from './utiles'
+import { identificarse, limpiar, unico } from './utiles'
 
 // Fase 6: terminar, entregar, devolver, hechas hoy, copiar mensaje.
 const cuadrante = (page: Page, id: string) => page.locator(`[data-cuadrante="${id}"]`)
@@ -28,6 +28,7 @@ async function abrirHechas(page: Page) {
 test.afterEach(({ request }) => limpiar(request))
 
 test.beforeEach(async ({ page }) => {
+  await identificarse(page)
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
 })

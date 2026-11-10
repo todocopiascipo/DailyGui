@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { limpiar, unico } from './utiles'
+import { identificarse, limpiar, unico } from './utiles'
 
 // Fase 5: arrastrar y soltar, tacho, papelera; OT; responsables y atajos.
 const cuadrante = (page: Page, id: string) => page.locator(`[data-cuadrante="${id}"]`)
@@ -48,6 +48,7 @@ async function arrastrar(
 test.afterEach(({ request }) => limpiar(request))
 
 test.beforeEach(async ({ page }) => {
+  await identificarse(page)
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
 })

@@ -5,6 +5,8 @@ export interface PersonaBreve {
   id: string
   nombre: string
   iniciales: string | null
+  /** Si configuró un PIN para "¿Quién soy?" (solo en los catálogos). */
+  tiene_pin?: boolean
 }
 
 /** Lo que la matriz necesita de cada tarea. */
@@ -20,6 +22,8 @@ export interface TareaMatriz {
   motivo_espera: Enums<'motivo_espera'> | null
   motivo_espera_detalle: string | null
   fecha_entrega: string | null
+  /** Hora de inicio prevista (para la línea del día de "Mis tareas"). */
+  fecha_inicio?: string | null
   terminada_at: string | null
   entregada_at: string | null
   /** Lo que debe el cliente (para "Copiar mensaje"). */

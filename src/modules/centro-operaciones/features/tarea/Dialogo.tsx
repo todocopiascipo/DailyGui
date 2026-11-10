@@ -8,7 +8,7 @@ interface Props {
   titulo: string
   /** Oculta el título visualmente (queda para lectores de pantalla). */
   tituloOculto?: boolean
-  variante: 'centro' | 'lateral'
+  variante: 'centro' | 'lateral' | 'amplia'
   /** Si hay cambios sin guardar, cerrar pide confirmación. */
   sinGuardar: boolean
   onCerrar: () => void

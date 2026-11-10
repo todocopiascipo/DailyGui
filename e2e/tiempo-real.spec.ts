@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { limpiar, unico } from './utiles'
+import { identificarse, limpiar, unico } from './utiles'
 
 // Tiempo real y conexión (especificación 8 y Fase 4).
 const cuadrante = (page: Page, id: string) => page.locator(`[data-cuadrante="${id}"]`)
@@ -7,6 +7,7 @@ const globo = (page: Page, titulo: string) =>
   page.getByTestId('co-globo').filter({ hasText: titulo })
 
 async function abrir(page: Page) {
+  await identificarse(page)
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
 }

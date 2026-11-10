@@ -2,7 +2,7 @@
  * Operaciones sobre la base local. Cada operación corre en una transacción,
  * aplica las reglas automáticas y registra el historial (una sola vía).
  */
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
 import { enTransaccion, type BaseDeDatos } from './db.ts'
 import {
   diferencias,
@@ -624,6 +624,58 @@ export function purgarPapelera(db: BaseDeDatos, ahora = new Date()): number {
     borrarDefinitiva(db, { persona: null, ahora: ahora.toISOString() }, id)
   }
   return vencidas.length
+}
+
+// ---------------------------------------------------------------------------
+// PIN opcional de cada persona (especificación 7.6 y 11): solo se guarda un
+// hash con sal (scrypt), nunca el PIN.
+// ---------------------------------------------------------------------------
+
+/** "scrypt$<sal>$<hash>" en hexadecimal. */
+export function hashPin(pin: string): string {
+  const sal = randomBytes(16)
+  const hash = scryptSync(pin, sal, 32)
+  return `scrypt$${sal.toString('hex')}$${hash.toString('hex')}`
+}
+
+export function pinCorrecto(pin: string, guardado: string): boolean {
+  const [tipo, salHex, hashHex] = guardado.split('$')
+  if (tipo !== 'scrypt' || !salHex || !hashHex) return false
+  const esperado = Buffer.from(hashHex, 'hex')
+  const calculado = scryptSync(pin, Buffer.from(salHex, 'hex'), esperado.length)
+  return timingSafeEqual(calculado, esperado)
+}
+
+function leerPinHash(db: BaseDeDatos, id: string): string | null {
+  const fila = db.prepare('SELECT pin_hash FROM personas WHERE id = ? AND activa = 1').get(id) as
+    Fila | undefined
+  if (!fila) throw new ErrorNoEncontrado('La persona no existe')
+  return (fila.pin_hash ?? null) as string | null
+}
+
+/** Comprueba el PIN al elegir "¿Quién soy?". Sin PIN configurado, cualquier intento vale. */
+export function verificarPin(db: BaseDeDatos, id: string, pin: string): void {
+  const guardado = leerPinHash(db, id)
+  if (guardado && !pinCorrecto(pin, guardado)) throw new ErrorValidacion('PIN incorrecto')
+}
+
+/**
+ * Pone, cambia o quita (pin_nuevo null) el PIN. Si ya tiene uno, hay que dar
+ * el actual.
+ */
+export function cambiarPin(
+  db: BaseDeDatos,
+  id: string,
+  datos: { pin_actual: string | null; pin_nuevo: string | null },
+): void {
+  const guardado = leerPinHash(db, id)
+  if (guardado && !(datos.pin_actual && pinCorrecto(datos.pin_actual, guardado))) {
+    throw new ErrorValidacion('El PIN actual no es correcto')
+  }
+  db.prepare('UPDATE personas SET pin_hash = ? WHERE id = ?').run(
+    datos.pin_nuevo ? hashPin(datos.pin_nuevo) : null,
+    id,
+  )
 }
 
 export class ErrorNoEncontrado extends Error {}

@@ -5,6 +5,7 @@ import {
   cargarCatalogos,
   cargarDetalle,
   cargarMatriz,
+  cargarMisTareas,
   cargarHechas,
   cargarPapelera,
 } from './consultas.ts'
@@ -14,12 +15,15 @@ import {
   actualizarSubtarea,
   actualizarTarea,
   borrarDefinitiva,
+  cambiarPin,
   diasPapelera,
   devolverTarea,
   eliminarTarea,
   entregarTarea,
   guardarConfiguracion,
+  personaValida,
   terminarTarea,
+  verificarPin,
   restaurarTarea,
   crearPersona,
   crearSubtarea,
@@ -34,8 +38,10 @@ import {
   validarEdicionTarea,
   validarNuevaPersona,
   validarNuevaSubtarea,
+  validarCambioPin,
   validarConfiguracion,
   validarNuevaTarea,
+  validarVerificarPin,
 } from './validar.ts'
 
 interface Pedido {
@@ -113,6 +119,30 @@ const RUTAS: [string, string, Manejador][] = [
   ],
   ['GET', '/api/clientes', ({ db, query }) => buscarClientes(db, query.get('telefono') ?? '')],
   ['POST', '/api/personas', ({ db, cuerpo }) => crearPersona(db, validarNuevaPersona(cuerpo))],
+  [
+    'POST',
+    '/api/personas/:id/verificar',
+    ({ db, params, cuerpo }) => {
+      verificarPin(db, params.id!, validarVerificarPin(cuerpo))
+      return { ok: true }
+    },
+  ],
+  [
+    'PUT',
+    '/api/personas/:id/pin',
+    ({ db, params, cuerpo }) => {
+      cambiarPin(db, params.id!, validarCambioPin(cuerpo))
+      return { ok: true }
+    },
+  ],
+  [
+    'GET',
+    '/api/personas/:id/tareas',
+    ({ db, params }) => {
+      if (!personaValida(db, params.id!)) throw new ErrorNoEncontrado('La persona no existe')
+      return cargarMisTareas(db, params.id!)
+    },
+  ],
   [
     'POST',
     '/api/tareas',

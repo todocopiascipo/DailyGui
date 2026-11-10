@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { limpiar, unico } from './utiles'
+import { identificarse, limpiar, unico } from './utiles'
 
 // Crear y editar contra el servidor de pruebas (base en memoria compartida por
 // los dos proyectos): cada prueba usa nombres únicos.
@@ -15,6 +15,7 @@ async function crearPorApi(page: Page, tarea: Record<string, unknown>) {
 test.afterEach(({ request }) => limpiar(request))
 
 test.beforeEach(async ({ page }) => {
+  await identificarse(page)
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
 })

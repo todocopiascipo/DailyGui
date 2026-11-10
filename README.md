@@ -42,6 +42,10 @@ En la matriz:
   detalle). Al terminar, la tarjeta queda azul con el botón "Entregada"; al
   entregarla, sale de la matriz. El menú también tiene "Devolver al estado
   anterior", "Copiar mensaje" (para WhatsApp) y "Copiar teléfono".
+- **¿Quién soy?:** abajo a la izquierda. Cada dispositivo recuerda quién lo
+  usa; lo que se hace queda a su nombre en el historial. Con el ojo se
+  resaltan sus tareas, y "Mis tareas" muestra qué hacer ahora, la línea del
+  día y el paso a paso. El PIN es opcional.
 - **Hechas hoy:** acercando el mouse al borde derecho (o la pestaña del borde
   en el iPad): lo terminado y lo entregado en el día, con "Devolver".
 - **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en
@@ -64,7 +68,9 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
 - Tiempo real: `GET /api/cambios` (Server-Sent Events, `server/canal.ts`)
   avisa cada cambio a las pantallas abiertas, con un latido cada 5 s.
 - API (`server/app.ts`): `GET /api/matriz`, `GET /api/catalogos`,
-  `GET /api/clientes?telefono=`, `POST /api/personas`, `POST /api/tareas`,
+  `GET /api/clientes?telefono=`, `POST /api/personas`,
+  `POST /api/personas/:id/verificar`, `PUT /api/personas/:id/pin`,
+  `GET /api/personas/:id/tareas`, `POST /api/tareas`,
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,

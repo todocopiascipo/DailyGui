@@ -27,6 +27,10 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-10 | Dónde están Terminar y Entregada | En el menú de tres puntitos y en el detalle; la tarjeta azul de un pedido terminado muestra además el botón "Entregada". Ambos con confirmación. Al terminar un pedido, el aviso ofrece "Copiar mensaje". |
 | 2026-11-10 | Panel "Hechas hoy" | En la PC aparece al acercar el mouse al borde derecho; en el iPad, deslizando desde el borde o con la pestaña casi transparente del borde derecho. Se reinicia al cambiar el día (hora de Buenos Aires). |
 | 2026-11-10 | Copiar en el iPad | Desde el iPad por la red del local (http) el navegador no habilita el portapapeles moderno: se usa el método clásico como respaldo. |
+| 2026-11-10 | "¿Quién soy?" | Cápsula abajo a la izquierda. Se recuerda en cada dispositivo. Crear (+, OT, N, O), terminar, entregar y eliminar piden elegirse si no hay nadie elegido, y después siguen con lo que se quería hacer. Ahí mismo uno puede sumarse al equipo. |
+| 2026-11-10 | PIN opcional | De 4 a 8 números; se guarda solo como hash con sal (scrypt), nunca el PIN. Cada persona lo pone, cambia o quita desde "¿Quién soy?" (cambiar o quitar exige el actual). Mientras la app sea local, el PIN evita confusiones entre compañeros; no es una protección fuerte (la seguridad real llega con la cuenta del local al migrar a Supabase). |
+| 2026-11-10 | Resaltado | Al elegirse, sus tareas quedan marcadas y las demás atenuadas; el botón del ojo lo apaga y prende (se recuerda por dispositivo). |
+| 2026-11-10 | "Mis tareas" | Ahora / Sigue (entrega más cercana), línea del día (lo de hoy y lo vencido, de la hora de inicio a la de entrega) y paso a paso con checklist: todos los pasos de cada tarea, con quién hace cada uno ("Vos" en los propios). Sin pasos pendientes, ofrece Terminar. |
 
 ## Consecuencias del prototipo local
 

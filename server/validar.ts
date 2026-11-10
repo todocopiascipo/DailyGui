@@ -206,3 +206,23 @@ export function validarConfiguracion(clave: string, cuerpo: unknown): unknown {
   if (clave === 'plantilla_mensaje') return texto(o.valor, 'Plantilla del mensaje', 500)
   throw new ErrorNoEncontrado('Esa configuración no se puede cambiar')
 }
+
+/** PIN: de 4 a 8 números. */
+function pin(v: unknown, nombre: string): string {
+  if (typeof v !== 'string' || !/^\d{4,8}$/.test(v)) falla(`${nombre}: de 4 a 8 números`)
+  return v
+}
+
+export function validarVerificarPin(cuerpo: unknown): string {
+  const o = objeto(cuerpo, 'PIN')
+  // Cualquier texto vale para comparar; el formato se exige al guardarlo.
+  return typeof o.pin === 'string' ? o.pin.slice(0, 16) : ''
+}
+
+export function validarCambioPin(cuerpo: unknown) {
+  const o = objeto(cuerpo, 'PIN')
+  return {
+    pin_actual: typeof o.pin_actual === 'string' ? o.pin_actual.slice(0, 16) : null,
+    pin_nuevo: o.pin_nuevo === null ? null : pin(o.pin_nuevo, 'PIN'),
+  }
+}

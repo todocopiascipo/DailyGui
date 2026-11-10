@@ -9,6 +9,7 @@ import type {
   DetalleTarea,
   EventoDetalle,
 } from '../src/modules/centro-operaciones/features/tarea/tipos.ts'
+import type { TareaMia } from '../src/modules/centro-operaciones/features/mis-tareas/tipos.ts'
 import type { BaseDeDatos } from './db.ts'
 import { aSubtarea, leerTarea } from './servicio.ts'
 
@@ -18,7 +19,7 @@ export interface RespuestaMatriz {
 }
 
 /** Columnas que necesita cada tarjeta (matriz y panel de hechas). */
-const COLUMNAS_TARJETA = `t.id, t.tipo, t.titulo, t.importante, t.urgencia_manual, t.estado,
+const COLUMNAS_TARJETA = `t.id, t.tipo, t.titulo, t.importante, t.urgencia_manual, t.estado, t.fecha_inicio,
   t.estado_anterior, t.motivo_espera, t.motivo_espera_detalle, t.fecha_entrega, t.saldo,
   t.terminada_at, t.entregada_at,
   c.nombre_apellido AS cliente_nombre, c.telefono AS cliente_telefono,
@@ -107,6 +108,7 @@ function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatr
     motivo_espera: (f.motivo_espera ?? null) as TareaMatriz['motivo_espera'],
     motivo_espera_detalle: texto(f.motivo_espera_detalle),
     fecha_entrega: texto(f.fecha_entrega),
+    fecha_inicio: texto(f.fecha_inicio),
     terminada_at: texto(f.terminada_at),
     entregada_at: texto(f.entregada_at),
     saldo: Number(f.saldo),
@@ -123,13 +125,14 @@ export function cargarCatalogos(db: BaseDeDatos): Catalogos {
   // Primero las asignadas más recientemente: acceso rápido a los de siempre.
   const personas = db
     .prepare(
-      `SELECT p.id, p.nombre, p.iniciales FROM personas p
+      `SELECT p.id, p.nombre, p.iniciales, p.pin_hash IS NOT NULL AS tiene_pin FROM personas p
        WHERE p.activa = 1
        ORDER BY (SELECT max(r.created_at) FROM tarea_responsables r WHERE r.persona_id = p.id)
                 DESC NULLS LAST,
                 p.orden, p.nombre`,
     )
-    .all() as unknown as PersonaBreve[]
+    .all()
+    .map((p) => ({ ...(p as unknown as PersonaBreve), tiene_pin: p.tiene_pin === 1 }))
   const categorias = db
     .prepare(
       'SELECT id, nombre, tipo_aplica FROM categorias WHERE activa = 1 ORDER BY orden, nombre',
@@ -227,5 +230,43 @@ export function cargarPapelera(db: BaseDeDatos, dias: number): TareaPapelera[] {
     eliminada_at: String(f.eliminada_at),
     eliminada_por: (f.eliminada_por ?? null) as string | null,
     se_borra_el: new Date(Date.parse(String(f.eliminada_at)) + dias * 86_400_000).toISOString(),
+  }))
+}
+
+/**
+ * "Mis tareas" (especificación 7.7): lo que tiene asignado la persona, en
+ * curso o terminado sin entregar, ordenado por la entrega más cercana, con
+ * todos sus pasos (subtareas) y quién hace cada uno.
+ */
+export function cargarMisTareas(db: BaseDeDatos, personaId: string): TareaMia[] {
+  const filas = db
+    .prepare(
+      `SELECT ${COLUMNAS_TARJETA}
+       WHERE t.eliminada_at IS NULL
+         AND t.estado IN ('pendiente', 'en_proceso', 'en_espera', 'terminada')
+         AND NOT (t.tipo = 'interna' AND t.estado = 'terminada')
+         AND t.id IN (SELECT tarea_id FROM tarea_responsables WHERE persona_id = ?)
+       ORDER BY t.fecha_entrega IS NULL, t.fecha_entrega, t.created_at`,
+    )
+    .all(personaId) as Record<string, unknown>[]
+  const pasos = db.prepare(
+    `SELECT s.id, s.titulo, s.hecha, p.id AS p_id, p.nombre AS p_nombre, p.iniciales AS p_iniciales
+     FROM subtareas s LEFT JOIN personas p ON p.id = s.responsable_id
+     WHERE s.tarea_id = ? ORDER BY s.orden, s.created_at`,
+  )
+  return aTarjetas(db, filas).map((t) => ({
+    ...t,
+    pasos: (pasos.all(t.id) as Record<string, unknown>[]).map((p) => ({
+      id: String(p.id),
+      titulo: String(p.titulo),
+      hecha: p.hecha === 1,
+      responsable: p.p_id
+        ? {
+            id: String(p.p_id),
+            nombre: String(p.p_nombre),
+            iniciales: (p.p_iniciales ?? null) as string | null,
+          }
+        : null,
+    })),
   }))
 }

@@ -20,7 +20,10 @@ import {
   type AltaPedida,
   type EstadoCreacion,
 } from '../features/tarea/CreacionRapida'
-import { useCrearTarea, useTareasProvisorias } from '../features/tarea/datos'
+import { ControlesPersona } from '../features/persona/ControlesPersona'
+import { ContextoPersona, usePersonaActiva } from '../features/persona/persona'
+import { QuienSoy } from '../features/persona/QuienSoy'
+import { useCatalogos, useCrearTarea, useTareasProvisorias } from '../features/tarea/datos'
 import { DetalleTarea } from '../features/tarea/DetalleTarea'
 import { OrdenDeTrabajo } from '../features/tarea/OrdenDeTrabajo'
 import { lanzarConfeti } from '../lib/confeti'
@@ -30,6 +33,7 @@ import { movimiento } from '../lib/urgencia'
 
 // Configuración se usa poco: se carga recién cuando se abre.
 const Configuracion = lazy(() => import('../features/configuracion/Configuracion'))
+const MisTareas = lazy(() => import('../features/mis-tareas/MisTareas'))
 
 /** No interceptar atajos mientras se escribe. */
 function escribiendo(destino: EventTarget | null): boolean {
@@ -88,9 +92,31 @@ export function PantallaPrincipal() {
   const [abierta, setAbierta] = useState<string | null>(null)
   const [porConfirmar, setPorConfirmar] = useState<PorConfirmar | null>(null)
   const [configurando, setConfigurando] = useState(false)
+  const [viendoMisTareas, setViendoMisTareas] = useState(false)
+  const catalogos = useCatalogos()
+  const quien = usePersonaActiva(catalogos.data?.personas)
+  /** "¿Quién soy?" abierto; si vino de una acción, se sigue con ella al elegir. */
+  const [eligiendo, setEligiendo] = useState<{ motivo?: string; despues?: () => void } | null>(null)
   const [aviso, setAviso] = useState<Aviso | null>(null)
   const raiz = useRef<HTMLDivElement>(null)
-  const hayVentana = creando !== null || abierta !== null || porConfirmar !== null || configurando
+  const hayVentana =
+    creando !== null ||
+    abierta !== null ||
+    porConfirmar !== null ||
+    configurando ||
+    eligiendo !== null ||
+    viendoMisTareas
+
+  /**
+   * Crear, terminar, entregar y eliminar quedan a nombre de alguien
+   * (especificación 7.6): sin persona elegida, primero se pregunta quién es.
+   */
+  const conPersona = (motivo: string, accion: () => void) => {
+    if (quien.identificado) accion()
+    else setEligiendo({ motivo, despues: accion })
+  }
+  const abrirAlta = (formulario: Creacion['formulario']) =>
+    conPersona('Para crear una tarea, elegí quién sos.', () => setCreando({ formulario }))
 
   // Los avisos se van solos.
   useEffect(() => {
@@ -156,7 +182,7 @@ export function PantallaPrincipal() {
     if (accion === 'copiar-telefono') return void copiar(t, 'telefono')
     if (accion === 'devolver') return devolver(t)
     if (!conectado) return sinConexion()
-    setPorConfirmar({ accion, tarea: t })
+    conPersona('Para esto, elegí quién sos.', () => setPorConfirmar({ accion, tarea: t }))
   }
 
   const confirmar = () => {
@@ -205,6 +231,13 @@ export function PantallaPrincipal() {
       )
   }
 
+  const ejecutarRef = useRef(ejecutar)
+  const abrirAltaRef = useRef(abrirAlta)
+  useEffect(() => {
+    ejecutarRef.current = ejecutar
+    abrirAltaRef.current = abrirAlta
+  })
+
   // Lo necesario para soltar, siempre al día (la función de soltar se crea una vez).
   const actual = useRef({
     tareas,
@@ -213,7 +246,7 @@ export function PantallaPrincipal() {
     ahora,
     conectado,
     devolver,
-    pedirEliminar: (t: RefTarea) => setPorConfirmar({ accion: 'eliminar', tarea: t }),
+    pedirEliminar: (t: RefTarea) => ejecutarRef.current('eliminar', t),
   })
   useEffect(() => {
     actual.current = { ...actual.current, tareas, hechas: hechas.data, matriz: matriz.data }
@@ -257,7 +290,7 @@ export function PantallaPrincipal() {
       const tecla = e.key.toLowerCase()
       if (tecla !== 'n' && tecla !== 'o') return
       e.preventDefault()
-      setCreando({ formulario: tecla === 'o' ? 'ot' : 'rapida' })
+      abrirAltaRef.current(tecla === 'o' ? 'ot' : 'rapida')
     }
     window.addEventListener('keydown', alTeclear)
     return () => window.removeEventListener('keydown', alTeclear)
@@ -285,71 +318,104 @@ export function PantallaPrincipal() {
 
   return (
     <ContextoConexion.Provider value={conexion}>
-      <ContextoAcciones.Provider value={ejecutar}>
-        <div ref={raiz} className="co-contenido">
-          <ProveedorArrastre onSoltar={soltar}>
-            <Matriz
-              tareas={tareas}
-              config={matriz.data.config}
-              ahora={ahora}
-              onAbrir={setAbierta}
+      <ContextoPersona.Provider value={{ persona: quien.persona, resaltar: quien.resaltar }}>
+        <ContextoAcciones.Provider value={ejecutar}>
+          <div ref={raiz} className="co-contenido">
+            <ProveedorArrastre onSoltar={soltar}>
+              <Matriz
+                tareas={tareas}
+                config={matriz.data.config}
+                ahora={ahora}
+                onAbrir={setAbierta}
+              />
+              <Controles
+                onCrear={() => abrirAlta('rapida')}
+                onCrearOT={() => abrirAlta('ot')}
+                onConfigurar={() => setConfigurando(true)}
+              />
+              <PanelHechas hechas={hechas.data} ejecutar={ejecutar} onAbrir={setAbierta} />
+            </ProveedorArrastre>
+            <ControlesPersona
+              persona={quien.persona}
+              resaltar={quien.resaltar}
+              onElegir={() => setEligiendo({})}
+              onResaltar={() => quien.setResaltar(!quien.resaltar)}
+              onMisTareas={() => setViendoMisTareas(true)}
             />
-            <Controles
-              onCrear={() => setCreando({ formulario: 'rapida' })}
-              onCrearOT={() => setCreando({ formulario: 'ot' })}
-              onConfigurar={() => setConfigurando(true)}
-            />
-            <PanelHechas hechas={hechas.data} ejecutar={ejecutar} onAbrir={setAbierta} />
-          </ProveedorArrastre>
-          <IndicadorConexion estado={conexion} />
-          {aviso && (
-            <div
-              className={`co-aviso-flotante co-aviso-flotante--${aviso.tipo}`}
-              role={aviso.tipo === 'error' ? 'alert' : 'status'}
-            >
-              <span>{aviso.texto}</span>
-              {aviso.accion && (
-                <button
-                  type="button"
-                  className="co-boton-sutil"
-                  onClick={() => {
-                    aviso.accion?.hacer()
-                  }}
-                >
-                  {aviso.accion.texto}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            <IndicadorConexion estado={conexion} />
+            {aviso && (
+              <div
+                className={`co-aviso-flotante co-aviso-flotante--${aviso.tipo}`}
+                role={aviso.tipo === 'error' ? 'alert' : 'status'}
+              >
+                <span>{aviso.texto}</span>
+                {aviso.accion && (
+                  <button
+                    type="button"
+                    className="co-boton-sutil"
+                    onClick={() => {
+                      aviso.accion?.hacer()
+                    }}
+                  >
+                    {aviso.accion.texto}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-        {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
-        {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
-        {abierta && (
-          <DetalleTarea
-            id={abierta}
-            ahora={ahora}
-            umbrales={matriz.data.config.umbrales}
-            onCerrar={() => setAbierta(null)}
-            onAccion={ejecutar}
-          />
-        )}
-        {porConfirmar && confirmacion && (
-          <Confirmacion
-            titulo={confirmacion.titulo}
-            texto={confirmacion.texto}
-            confirmar={confirmacion.confirmar}
-            peligro={porConfirmar.accion === 'eliminar'}
-            onCancelar={() => setPorConfirmar(null)}
-            onConfirmar={confirmar}
-          />
-        )}
-        {configurando && (
-          <Suspense fallback={null}>
-            <Configuracion ahora={ahora} onCerrar={() => setConfigurando(false)} />
-          </Suspense>
-        )}
-      </ContextoAcciones.Provider>
+          {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
+          {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
+          {abierta && (
+            <DetalleTarea
+              id={abierta}
+              ahora={ahora}
+              umbrales={matriz.data.config.umbrales}
+              onCerrar={() => setAbierta(null)}
+              onAccion={ejecutar}
+            />
+          )}
+          {porConfirmar && confirmacion && (
+            <Confirmacion
+              titulo={confirmacion.titulo}
+              texto={confirmacion.texto}
+              confirmar={confirmacion.confirmar}
+              peligro={porConfirmar.accion === 'eliminar'}
+              onCancelar={() => setPorConfirmar(null)}
+              onConfirmar={confirmar}
+            />
+          )}
+          {eligiendo && (
+            <QuienSoy
+              personas={catalogos.data?.personas ?? []}
+              actual={quien.persona}
+              motivo={eligiendo.motivo}
+              onCerrar={() => setEligiendo(null)}
+              onElegir={(p) => {
+                quien.elegir(p)
+                const despues = eligiendo.despues
+                setEligiendo(null)
+                if (p && despues) despues()
+              }}
+            />
+          )}
+          {viendoMisTareas && quien.persona && (
+            <Suspense fallback={null}>
+              <MisTareas
+                persona={quien.persona}
+                ahora={ahora}
+                onAbrir={setAbierta}
+                onCerrar={() => setViendoMisTareas(false)}
+              />
+            </Suspense>
+          )}
+          {configurando && (
+            <Suspense fallback={null}>
+              <Configuracion ahora={ahora} onCerrar={() => setConfigurando(false)} />
+            </Suspense>
+          )}
+        </ContextoAcciones.Provider>
+      </ContextoPersona.Provider>
     </ContextoConexion.Provider>
   )
 }

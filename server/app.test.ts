@@ -466,6 +466,74 @@ describe('API de edición', () => {
     expect((await api('PUT', '/configuracion/papelera_dias', { valor: 1 })).estado).toBe(404)
   })
 
+  it('PIN: se guarda como hash, se verifica y para cambiarlo hay que saber el actual', async () => {
+    const id = (await api('POST', '/personas', { nombre: 'Con PIN' })).cuerpo.id as string
+    const tienePin = async () =>
+      (await api('GET', '/catalogos')).cuerpo.personas.find((p: { id: string }) => p.id === id)
+        .tiene_pin
+    expect(await tienePin()).toBe(false)
+    // Sin PIN, elegirse no pide nada.
+    expect((await api('POST', `/personas/${id}/verificar`, { pin: '' })).estado).toBe(201)
+
+    expect((await api('PUT', `/personas/${id}/pin`, { pin_nuevo: '12' })).estado).toBe(400)
+    expect((await api('PUT', `/personas/${id}/pin`, { pin_nuevo: '4321' })).estado).toBe(200)
+    expect(await tienePin()).toBe(true)
+    const guardado = (
+      db.prepare('SELECT pin_hash FROM personas WHERE id = ?').get(id) as {
+        pin_hash: string
+      }
+    ).pin_hash
+    expect(guardado).not.toContain('4321')
+    expect(guardado).toMatch(/^scrypt\$[0-9a-f]{32}\$[0-9a-f]{64}$/)
+
+    expect((await api('POST', `/personas/${id}/verificar`, { pin: '0000' })).estado).toBe(400)
+    expect((await api('POST', `/personas/${id}/verificar`, { pin: '4321' })).estado).toBe(201)
+
+    // Cambiar o quitar exige el PIN actual.
+    expect((await api('PUT', `/personas/${id}/pin`, { pin_nuevo: null })).estado).toBe(400)
+    expect(
+      (await api('PUT', `/personas/${id}/pin`, { pin_actual: '4321', pin_nuevo: null })).estado,
+    ).toBe(200)
+    expect(await tienePin()).toBe(false)
+  })
+
+  it('mis tareas: lo asignado (también por subtarea), con sus pasos y por entrega', async () => {
+    const ana = (await api('POST', '/personas', { nombre: 'Ana' })).cuerpo.id as string
+    const beto = (await api('POST', '/personas', { nombre: 'Beto' })).cuerpo.id as string
+    const en = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString()
+    await api('POST', '/tareas', {
+      tarea: { titulo: 'Después', importante: true, fecha_entrega: en(5) },
+      responsables: [ana],
+    })
+    await api('POST', '/tareas', {
+      tarea: { titulo: 'Antes', importante: true, fecha_entrega: en(2) },
+      responsables: [beto],
+      subtareas: [
+        { titulo: 'Cortar', responsable_id: ana },
+        { titulo: 'Imprimir', responsable_id: beto },
+      ],
+    })
+    await api('POST', '/tareas', {
+      tarea: { titulo: 'De otro', importante: true },
+      responsables: [beto],
+    })
+    const terminada = (
+      await api('POST', '/tareas', {
+        tarea: { titulo: 'Interna hecha', importante: true, tipo: 'interna' },
+        responsables: [ana],
+      })
+    ).cuerpo.tarea.id as string
+    await api('POST', `/tareas/${terminada}/terminar`)
+
+    const r = await api('GET', `/personas/${ana}/tareas`)
+    expect(r.cuerpo.map((t: { titulo: string }) => t.titulo)).toEqual(['Antes', 'Después'])
+    expect(r.cuerpo[0].pasos).toMatchObject([
+      { titulo: 'Cortar', hecha: false, responsable: { nombre: 'Ana' } },
+      { titulo: 'Imprimir', responsable: { nombre: 'Beto' } },
+    ])
+    expect((await api('GET', `/personas/${crypto.randomUUID()}/tareas`)).estado).toBe(404)
+  })
+
   it('rechaza datos inválidos sin guardar nada', async () => {
     const casos = [
       { tarea: { titulo: '', importante: true } },

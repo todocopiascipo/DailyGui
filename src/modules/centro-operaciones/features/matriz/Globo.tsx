@@ -2,6 +2,7 @@ import { Check, FolderKanban, ListChecks, Pause, Skull } from 'lucide-react'
 import type { Enums } from '../../lib/database.types'
 import { textoEntrega } from '../../lib/tiempo'
 import type { Aspecto } from '../../lib/urgencia'
+import { usePersona } from '../persona/persona'
 import { useAcciones } from './accionesTarea'
 import { useArrastre } from './arrastreContexto'
 import { MenuTarea } from './MenuTarea'
@@ -59,6 +60,10 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
   const arrastre = useArrastre()
   const arrastrable = arrastre !== null && !tarea.provisoria
   const acciones = useAcciones()
+  // "¿Quién soy?": se resaltan las tareas propias y se atenúan las demás.
+  const { persona, resaltar } = usePersona()
+  const propia = persona !== null && tarea.responsables.some((r) => r.id === persona.id)
+  const ajena = resaltar && !propia
   const entregable =
     acciones !== null &&
     !tarea.provisoria &&
@@ -72,6 +77,8 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
       data-aspecto={aspecto}
       data-testid="co-globo"
       data-arrastrando={arrastre?.levantado?.id === tarea.id || undefined}
+      data-propia={(resaltar && propia) || undefined}
+      data-ajena={ajena || undefined}
       aria-busy={tarea.provisoria || undefined}
       title={tarea.titulo}
       onPointerDown={arrastrable ? (e) => arrastre.presionar(e, tarea.id) : undefined}

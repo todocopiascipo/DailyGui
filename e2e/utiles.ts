@@ -1,4 +1,4 @@
-import { test, type APIRequestContext } from '@playwright/test'
+import { test, type APIRequestContext, type Page } from '@playwright/test'
 
 /**
  * Las pruebas comparten una base en memoria y corren en paralelo. Cada una usa
@@ -39,4 +39,27 @@ export async function limpiar(request: APIRequestContext) {
   for (const t of papelera.filter((t) => t.titulo.includes(s))) {
     await request.delete(`/api/tareas/${t.id}`)
   }
+}
+
+const PERSONA_DE_PRUEBA = 'Equipo de pruebas'
+
+/**
+ * Deja elegida una persona en este navegador ("¿Quién soy?"), como si ya se
+ * hubiera identificado, y sin resaltar (para no atenuar globos ajenos).
+ * Llamar antes de `page.goto`.
+ */
+export async function identificarse(page: Page): Promise<string> {
+  const r = await page.request.post('/api/personas', { data: { nombre: PERSONA_DE_PRUEBA } })
+  const id = r.ok()
+    ? ((await r.json()) as { id: string }).id
+    : (
+        (await (await page.request.get('/api/catalogos')).json()) as {
+          personas: { id: string; nombre: string }[]
+        }
+      ).personas.find((p) => p.nombre === PERSONA_DE_PRUEBA)!.id
+  await page.addInitScript((id) => {
+    window.localStorage.setItem('co-persona-activa', id)
+    window.localStorage.setItem('co-resaltar-mias', 'no')
+  }, id)
+  return id
 }
