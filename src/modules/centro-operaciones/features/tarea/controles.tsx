@@ -1,11 +1,12 @@
 import { Plus, X } from 'lucide-react'
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { ATAJOS, aplicarAtajo, SIN_FECHA, type FechaHora } from '../../lib/fechas'
 import type { PersonaBreve } from '../matriz/tipos'
-import type { BorradorCliente } from './borrador'
+import type { BorradorCliente, MedioPago } from './borrador'
 import { useConectado } from '../../lib/tiempoReal'
-import { buscarClientes, useCrearPersona } from './datos'
+import { useCrearPersona } from './datos'
 import type { Cliente } from './tipos'
+import { MEDIOS_PAGO, normalizar, useClientesPorTelefono } from './utilidades'
 
 /** Etiqueta + control + error, con la accesibilidad resuelta. */
 export function Campo({
@@ -104,7 +105,10 @@ export function SiNo({
   )
 }
 
-/** Responsables: se tocan para elegir; se puede sumar una persona nueva al equipo. */
+/**
+ * Responsables: fichas de acceso rápido (las usadas más recientemente
+ * primero). "+ Persona" busca entre las existentes y, si no está, la agrega.
+ */
 export function ElegirResponsables({
   personas,
   elegidas,
@@ -122,13 +126,31 @@ export function ElegirResponsables({
   const alternar = (id: string) =>
     onCambiar(elegidas.includes(id) ? elegidas.filter((e) => e !== id) : [...elegidas, id])
 
+  const buscado = normalizar(nombre)
+  const exacta = buscado ? personas.find((p) => normalizar(p.nombre) === buscado) : undefined
+  // Mientras se escribe, se ven solo las que coinciden (y las ya elegidas).
+  const visibles = buscado
+    ? personas.filter((p) => normalizar(p.nombre).includes(buscado) || elegidas.includes(p.id))
+    : personas
+
+  const cerrarBusqueda = () => {
+    setNombre('')
+    setAgregando(false)
+  }
+
   const agregar = () => {
-    if (nombre.trim() === '' || !conectado) return
+    if (buscado === '') return
+    // Si ya existe, se elige en lugar de crearla de nuevo.
+    if (exacta) {
+      if (!elegidas.includes(exacta.id)) onCambiar([...elegidas, exacta.id])
+      cerrarBusqueda()
+      return
+    }
+    if (!conectado) return
     crear.mutate(nombre, {
       onSuccess: (p) => {
         onCambiar([...elegidas, p.id])
-        setNombre('')
-        setAgregando(false)
+        cerrarBusqueda()
       },
     })
   }
@@ -140,7 +162,7 @@ export function ElegirResponsables({
           {personas.length === 0 && !agregando && (
             <p className="co-texto-suave">Todavía no hay personas cargadas.</p>
           )}
-          {personas.map((p) => (
+          {visibles.map((p) => (
             <button
               key={p.id}
               type="button"
@@ -157,7 +179,7 @@ export function ElegirResponsables({
                 autoFocus
                 className="co-entrada co-entrada--chica"
                 aria-label="Nombre de la persona"
-                placeholder="Nombre"
+                placeholder="Buscar o agregar"
                 maxLength={60}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -168,7 +190,7 @@ export function ElegirResponsables({
                   }
                   if (e.key === 'Escape') {
                     e.stopPropagation()
-                    setAgregando(false)
+                    cerrarBusqueda()
                   }
                 }}
               />
@@ -176,15 +198,15 @@ export function ElegirResponsables({
                 type="button"
                 className="co-boton-sutil"
                 onClick={agregar}
-                disabled={crear.isPending || !conectado}
+                disabled={buscado === '' || crear.isPending || (!exacta && !conectado)}
               >
-                Agregar
+                {exacta ? `Elegir ${exacta.nombre}` : 'Agregar'}
               </button>
               <button
                 type="button"
                 className="co-boton-icono"
                 aria-label="Cancelar"
-                onClick={() => setAgregando(false)}
+                onClick={cerrarBusqueda}
               >
                 <X size={16} aria-hidden />
               </button>
@@ -210,21 +232,19 @@ export function ElegirResponsables({
   )
 }
 
-/** Fecha y hora (del local), con atajos opcionales. */
+/** Fecha y hora (del local), siempre con los atajos Hoy, Mañana, +1 h, +2 h y +4 h. */
 export function CampoFechaHora({
   etiqueta,
   valor,
   onCambiar,
   ahora,
   error,
-  conAtajos = false,
 }: {
   etiqueta: string
   valor: FechaHora
   onCambiar: (v: FechaHora) => void
   ahora: Date
   error?: string
-  conAtajos?: boolean
 }) {
   return (
     <Campo etiqueta={etiqueta} error={error} como="fieldset">
@@ -258,24 +278,52 @@ export function CampoFechaHora({
               </button>
             )}
           </div>
-          {conAtajos && (
-            <div className="co-atajos">
-              {ATAJOS.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  className="co-boton-sutil"
-                  onClick={() => onCambiar(aplicarAtajo(a.id, valor, ahora))}
-                >
-                  {a.texto}
-                </button>
-              ))}
-            </div>
-          )}
+          <div
+            className="co-atajos"
+            role="group"
+            aria-label={`Atajos de ${etiqueta.toLowerCase()}`}
+          >
+            {ATAJOS.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className="co-boton-sutil"
+                onClick={() => onCambiar(aplicarAtajo(a.id, valor, ahora))}
+              >
+                {a.texto}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </Campo>
   )
+}
+
+/** "Ya existe: … · Usar este cliente". */
+export function SugerenciasCliente({
+  encontrados,
+  onUsar,
+}: {
+  encontrados: Cliente[]
+  onUsar: (c: BorradorCliente) => void
+}) {
+  return encontrados.map((c) => (
+    <p key={c.id} className="co-sugerencia">
+      <span>
+        Ya existe: <strong>{c.nombre_apellido}</strong>
+      </span>
+      <button
+        type="button"
+        className="co-boton-sutil"
+        onClick={() =>
+          onUsar({ id: c.id, nombre_apellido: c.nombre_apellido, telefono: c.telefono ?? '' })
+        }
+      >
+        Usar este cliente
+      </button>
+    </p>
+  ))
 }
 
 /**
@@ -291,25 +339,7 @@ export function CamposCliente({
   onCambiar: (c: BorradorCliente) => void
   error?: string
 }) {
-  // Resultado de la última búsqueda, junto con el teléfono buscado.
-  const [busqueda, setBusqueda] = useState<{ telefono: string; clientes: Cliente[] } | null>(null)
-  const telefono = valor.telefono.trim()
-  const buscar = !valor.id && telefono.length >= 6
-  const encontrados = buscar && busqueda?.telefono === telefono ? busqueda.clientes : []
-
-  useEffect(() => {
-    if (!buscar) return
-    let vigente = true
-    const espera = setTimeout(() => {
-      buscarClientes(telefono)
-        .then((clientes) => vigente && setBusqueda({ telefono, clientes }))
-        .catch(() => vigente && setBusqueda(null))
-    }, 350)
-    return () => {
-      vigente = false
-      clearTimeout(espera)
-    }
-  }, [telefono, buscar])
+  const encontrados = useClientesPorTelefono(valor)
 
   return (
     <div className="co-grupo">
@@ -344,26 +374,7 @@ export function CamposCliente({
           )}
         </Campo>
       </div>
-      {encontrados.map((c) => (
-        <p key={c.id} className="co-sugerencia">
-          <span>
-            Ya existe: <strong>{c.nombre_apellido}</strong>
-          </span>
-          <button
-            type="button"
-            className="co-boton-sutil"
-            onClick={() =>
-              onCambiar({
-                id: c.id,
-                nombre_apellido: c.nombre_apellido,
-                telefono: c.telefono ?? '',
-              })
-            }
-          >
-            Usar este cliente
-          </button>
-        </p>
-      ))}
+      <SugerenciasCliente encontrados={encontrados} onUsar={onCambiar} />
     </div>
   )
 }
@@ -398,6 +409,45 @@ export function CampoImporte({
         </div>
       )}
     </Campo>
+  )
+}
+
+/**
+ * Importe con su medio de pago (como los recuadros de la orden de trabajo de
+ * papel: "POSNET · EFECTIVO · TRANSFERENCIA"). Tocar el medio elegido lo quita.
+ */
+export function CampoPago({
+  etiqueta,
+  valor,
+  medio,
+  onCambiar,
+  onCambiarMedio,
+  error,
+}: {
+  etiqueta: string
+  valor: string
+  medio: MedioPago | null
+  onCambiar: (v: string) => void
+  onCambiarMedio: (m: MedioPago | null) => void
+  error?: string
+}) {
+  return (
+    <div className="co-pago">
+      <CampoImporte etiqueta={etiqueta} valor={valor} onCambiar={onCambiar} error={error} />
+      <div className="co-pago__medios" role="group" aria-label={`Medio de pago: ${etiqueta}`}>
+        {MEDIOS_PAGO.map((m) => (
+          <button
+            key={m.valor}
+            type="button"
+            className="co-pago__medio"
+            aria-pressed={medio === m.valor}
+            onClick={() => onCambiarMedio(medio === m.valor ? null : m.valor)}
+          >
+            {m.texto}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

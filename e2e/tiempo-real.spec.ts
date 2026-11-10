@@ -1,15 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
+import { limpiar, unico } from './utiles'
 
 // Tiempo real y conexión (especificación 8 y Fase 4).
 const cuadrante = (page: Page, id: string) => page.locator(`[data-cuadrante="${id}"]`)
 const globo = (page: Page, titulo: string) =>
   page.getByTestId('co-globo').filter({ hasText: titulo })
-const unico = (texto: string) => `${texto} ${test.info().project.name} ${Date.now().toString(36)}`
 
 async function abrir(page: Page) {
   await page.goto('/')
   await expect(page.getByTestId('co-matriz')).toBeVisible()
 }
+
+test.afterEach(({ request }) => limpiar(request))
 
 test('dos navegadores se sincronizan en menos de 1 segundo', async ({ browser }) => {
   const [a, b] = await Promise.all([browser.newContext(), browser.newContext()])

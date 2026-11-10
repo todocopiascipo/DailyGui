@@ -76,8 +76,15 @@ export function cargarMatriz(db: BaseDeDatos): RespuestaMatriz {
 
 /** Personas y categorías activas, para los formularios. */
 export function cargarCatalogos(db: BaseDeDatos): Catalogos {
+  // Primero las asignadas más recientemente: acceso rápido a los de siempre.
   const personas = db
-    .prepare('SELECT id, nombre, iniciales FROM personas WHERE activa = 1 ORDER BY orden, nombre')
+    .prepare(
+      `SELECT p.id, p.nombre, p.iniciales FROM personas p
+       WHERE p.activa = 1
+       ORDER BY (SELECT max(r.created_at) FROM tarea_responsables r WHERE r.persona_id = p.id)
+                DESC NULLS LAST,
+                p.orden, p.nombre`,
+    )
     .all() as unknown as PersonaBreve[]
   const categorias = db
     .prepare(
@@ -148,4 +155,33 @@ export function cargarDetalle(db: BaseDeDatos, id: string): DetalleTarea | null 
     created_at: String(e.created_at),
   }))
   return { tarea, responsables, subtareas, cliente, creada_por, eventos }
+}
+
+export interface TareaPapelera {
+  id: string
+  titulo: string
+  tipo: string
+  eliminada_at: string
+  eliminada_por: string | null
+  /** Fecha en que se borra sola. */
+  se_borra_el: string
+}
+
+/** Tareas en la papelera, las más recientes primero. */
+export function cargarPapelera(db: BaseDeDatos, dias: number): TareaPapelera[] {
+  const filas = db
+    .prepare(
+      `SELECT t.id, t.titulo, t.tipo, t.eliminada_at, p.nombre AS eliminada_por
+       FROM tareas t LEFT JOIN personas p ON p.id = t.eliminada_por
+       WHERE t.eliminada_at IS NOT NULL ORDER BY t.eliminada_at DESC`,
+    )
+    .all() as Record<string, unknown>[]
+  return filas.map((f) => ({
+    id: String(f.id),
+    titulo: String(f.titulo),
+    tipo: String(f.tipo),
+    eliminada_at: String(f.eliminada_at),
+    eliminada_por: (f.eliminada_por ?? null) as string | null,
+    se_borra_el: new Date(Date.parse(String(f.eliminada_at)) + dias * 86_400_000).toISOString(),
+  }))
 }

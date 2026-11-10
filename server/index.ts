@@ -5,12 +5,25 @@
 import { join } from 'node:path'
 import { crearServidor } from './app.ts'
 import { abrirBase } from './db.ts'
+import { purgarPapelera } from './servicio.ts'
 
 const ruta = process.env.CO_DB_RUTA ?? join(process.cwd(), 'datos', 'operaciones.db')
 const puerto = Number(process.env.CO_PUERTO_API ?? 5174)
 
 const db = abrirBase(ruta)
 const servidor = crearServidor(db)
+
+// Purga de la papelera: al arrancar y cada hora (lo que pasó el plazo se borra para siempre).
+function purgar() {
+  try {
+    const n = purgarPapelera(db)
+    if (n > 0) console.log(`[servidor] papelera: ${n} tarea(s) borradas por vencimiento`)
+  } catch (error) {
+    console.error('[servidor] no se pudo purgar la papelera', error)
+  }
+}
+purgar()
+setInterval(purgar, 3_600_000).unref()
 
 // Solo escucha en esta PC: los demás dispositivos entran a través de la app web.
 servidor.listen(puerto, '127.0.0.1', () => {

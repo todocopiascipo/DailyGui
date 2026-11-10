@@ -1,0 +1,211 @@
+/* =============================================================================
+ * Orden de trabajo: con la forma de la OT de papel del local
+ * (hoja blanca, tinta negra, renglones y recuadros).
+ * ========================================================================== */
+.co-ot {
+  --co-tinta: var(--co-negro);
+  --co-tinta-suave: #4a4a55;
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-2);
+  padding: var(--co-space-3);
+  border-radius: 16px;
+  background: var(--co-blanco);
+  color: var(--co-tinta);
+  box-shadow: 0 16px 40px -20px rgb(0 0 0 / 0.6);
+}
+.co-ot__titulo {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.co-ot__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.co-ot__campo--linea {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--co-space-1);
+}
+.co-ot__etiqueta,
+.co-ot .co-campo__etiqueta {
+  flex: none;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--co-tinta);
+}
+.co-ot__etiqueta--centro {
+  text-align: center;
+}
+.co-ot__linea {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1.5px solid var(--co-tinta);
+  border-radius: 0;
+  background: transparent;
+  color: var(--co-tinta);
+  font-size: 17px;
+}
+/* El detalle, con renglones como en el papel. */
+.co-ot__detalle {
+  width: 100%;
+  min-height: 160px;
+  padding: 2px 4px;
+  border: 0;
+  background: repeating-linear-gradient(
+    transparent 0,
+    transparent 31px,
+    rgb(23 23 23 / 0.55) 31px,
+    rgb(23 23 23 / 0.55) 32px
+  );
+  color: var(--co-tinta);
+  font-size: 17px;
+  line-height: 32px;
+  resize: vertical;
+}
+.co-ot__ayuda {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--co-tinta-suave);
+}
+.co-ot__error {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+  color: #b3261e;
+}
+.co-ot__cajas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--co-space-2);
+}
+.co-ot__caja {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.co-ot__recuadro {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 0 12px;
+  border: 1.5px solid var(--co-tinta);
+  font-size: 22px;
+  font-weight: 700;
+}
+.co-ot__importe {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--co-tinta);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.co-ot__medios {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+.co-ot__medio {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--co-radius-pill);
+  background: transparent;
+  color: var(--co-tinta);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.co-ot__medio:hover {
+  border-color: rgb(23 23 23 / 0.3);
+}
+/* Elegido: rodeado, como cuando se marca en papel. */
+.co-ot__medio[aria-pressed='true'] {
+  border: 2px solid var(--co-azul-principal);
+  color: var(--co-azul-principal);
+}
+.co-ot__matriz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-2);
+  margin-top: var(--co-space-1);
+  padding-top: var(--co-space-2);
+  border-top: 1px dashed rgb(23 23 23 / 0.3);
+}
+@media (max-width: 479px) {
+  .co-ot {
+    padding: var(--co-space-2);
+  }
+  .co-ot__titulo {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .co-ot__cajas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Controles compartidos, en versión "papel" dentro de la OT. */
+.co-ot :focus-visible {
+  outline-color: var(--co-azul-principal);
+}
+.co-ot .co-entrada {
+  border-color: rgb(23 23 23 / 0.35);
+  background: var(--co-blanco);
+  color: var(--co-tinta);
+  color-scheme: light;
+}
+.co-ot .co-entrada::placeholder {
+  color: rgb(23 23 23 / 0.5);
+}
+.co-ot .co-boton-sutil,
+.co-ot .co-ficha {
+  border-color: rgb(23 23 23 / 0.3);
+  background: transparent;
+  color: var(--co-tinta);
+}
+.co-ot .co-boton-sutil:hover,
+.co-ot .co-ficha:hover {
+  background: rgb(23 23 23 / 0.06);
+}
+.co-ot .co-ficha[aria-pressed='true'],
+.co-ot .co-segmentado__opcion[aria-checked='true'] {
+  border-color: var(--co-azul-principal);
+  background: var(--co-azul-principal);
+  color: var(--co-blanco);
+}
+.co-ot .co-segmentado {
+  border-color: rgb(23 23 23 / 0.3);
+  background: transparent;
+}
+.co-ot .co-segmentado__opcion {
+  color: var(--co-tinta);
+}
+.co-ot .co-boton-icono,
+.co-ot .co-texto-suave {
+  color: var(--co-tinta-suave);
+}
+.co-ot .co-campo__error {
+  color: #b3261e;
+}
+.co-ot .co-sugerencia {
+  background: rgb(23 23 23 / 0.06);
+}

@@ -2,6 +2,7 @@ import { Check, FolderKanban, ListChecks, Pause, Skull } from 'lucide-react'
 import type { Enums } from '../../lib/database.types'
 import { textoEntrega } from '../../lib/tiempo'
 import type { Aspecto } from '../../lib/urgencia'
+import { useArrastre } from './arrastreContexto'
 import type { TareaMatriz } from './tipos'
 
 export type Densidad = 'normal' | 'compacto' | 'mini'
@@ -53,14 +54,20 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
   const linea = lineaEstado(tarea, aspecto, ahora)
   const { total, hechas } = tarea.subtareas
   const tamIcono = densidad === 'mini' ? 12 : 14
+  const arrastre = useArrastre()
+  const arrastrable = arrastre !== null && !tarea.provisoria
 
   return (
     <article
-      className={`co-globo co-globo--${aspecto} co-globo--${densidad}${tarea.provisoria ? ' co-globo--provisoria' : ''}`}
+      className={`co-globo co-globo--${aspecto} co-globo--${densidad}${tarea.provisoria ? ' co-globo--provisoria' : ''}${arrastrable ? ' co-globo--arrastrable' : ''}`}
       data-aspecto={aspecto}
       data-testid="co-globo"
+      data-arrastrando={arrastre?.levantado?.id === tarea.id || undefined}
       aria-busy={tarea.provisoria || undefined}
       title={tarea.titulo}
+      onPointerDown={arrastrable ? (e) => arrastre.presionar(e, tarea.id) : undefined}
+      // Mantener presionado en táctil levanta el globo: sin menú del sistema.
+      onContextMenu={arrastrable ? (e) => e.preventDefault() : undefined}
     >
       <div className="co-globo__cabecera">
         <h3 className="co-globo__titulo">{tarea.titulo}</h3>

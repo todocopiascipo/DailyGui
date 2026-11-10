@@ -16,6 +16,11 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-09 | Sin conexión (abierta 10) | Valor por defecto de la especificación: **se bloquea guardar** con un aviso amable. Lo que se esté cargando en un formulario no se pierde: queda ahí y se guarda cuando vuelve la conexión. |
 | 2026-11-09 | Tiempo real local | Canal de avisos del servidor (`/api/cambios`, Server-Sent Events, sin dependencias). Latido cada 5 s; sin latido por 12 s se muestra "Sin conexión" y se reconecta. Al reconectar o volver de suspensión se trae todo de nuevo. |
 | 2026-11-09 | Alta optimista | La tarea se ve en la matriz al instante (punteada, "guardando"). La pantalla genera el id y el servidor lo respeta, así nunca hay duplicados. Si el servidor la rechaza, desaparece y el formulario vuelve a abrirse con lo cargado y el motivo. |
+| 2026-11-09 | Orden de trabajo (OT) | Pedido del usuario: dos botones para crear, **"+"** (tarea rápida, tecla N) y **"OT"** (tecla O). La OT replica la de papel del local: Fecha inicio, Fecha límite, Detalle (la primera línea es el título), recuadros Seña y Debe con POSNET · EFECTIVO · TRANSFERENCIA, Celular y Nombre; abajo, responsables e Importante Sí/No (lo que necesita la matriz). |
+| 2026-11-09 | Medio de pago | Nuevos campos opcionales `sena_medio` y `saldo_medio` (posnet, efectivo, transferencia), también editables en el detalle. Migración local `0002`; la de Supabase queda escrita sin aplicar. |
+| 2026-11-09 | Responsables de acceso rápido | Pedido del usuario: las personas aparecen ordenadas por la asignación más reciente, y "+ Persona" busca entre las existentes (sin importar mayúsculas ni tildes) y ofrece elegirla en vez de duplicarla. |
+| 2026-11-09 | Atajos en todas las fechas | Pedido del usuario: Hoy, Mañana, +1 h, +2 h y +4 h en todos los campos de fecha (entrega, inicio, fecha límite). |
+| 2026-11-09 | Arrastrar y soltar | Sin dependencias. Mouse: se levanta al mover; iPad: manteniendo presionado (350 ms). El tacho aparece abajo al centro solo mientras se arrastra. También se puede eliminar desde el detalle (mismo diálogo). Configuración (por ahora solo la Papelera) se abre con el engranaje discreto abajo a la derecha. |
 
 ## Consecuencias del prototipo local
 

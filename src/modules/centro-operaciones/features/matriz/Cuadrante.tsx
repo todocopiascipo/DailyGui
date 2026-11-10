@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useRef } from 'react'
 import { NOMBRES_CUADRANTE, type Aspecto, type Cuadrante as IdCuadrante } from '../../lib/urgencia'
 import { repartir } from './densidad'
+import { useArrastre } from './arrastreContexto'
 import { Globo } from './Globo'
 import type { TareaMatriz } from './tipos'
 import { useMedida } from './useMedida'
@@ -40,6 +41,9 @@ export function Cuadrante({
   const midiendo = vista === 'general' || vista === 'ampliado'
   const { ancho, alto } = useMedida(cuerpo, midiendo)
   const nombre = NOMBRES_CUADRANTE[id]
+  const arrastre = useArrastre()
+  // Mientras se arrastra un globo, se marca el cuadrante donde caería.
+  const resaltado = arrastre?.sobre?.tipo === 'cuadrante' && arrastre.sobre.id === id
 
   const reparto =
     vista === 'lista' ? null : midiendo && ancho > 0 ? repartir(items.length, ancho, alto) : null
@@ -56,6 +60,7 @@ export function Cuadrante({
         style={style}
         aria-label={nombre}
         data-cuadrante={id}
+        data-resaltado={resaltado || undefined}
       >
         <button type="button" className="co-cuadrante__mini" onClick={onVolver}>
           <span className="co-etiqueta">{nombre}</span>
@@ -71,6 +76,7 @@ export function Cuadrante({
       style={style}
       aria-label={nombre}
       data-cuadrante={id}
+      data-resaltado={resaltado || undefined}
     >
       <header className="co-cuadrante__cabecera">
         {vista === 'general' ? (

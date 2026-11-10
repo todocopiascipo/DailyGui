@@ -14,6 +14,8 @@ export interface BorradorCliente {
   telefono: string
 }
 
+export type MedioPago = Enums<'medio_pago'>
+
 export interface Borrador {
   titulo: string
   tipo: Enums<'tipo_tarea'>
@@ -28,6 +30,8 @@ export interface Borrador {
   cliente: BorradorCliente
   sena: string
   saldo: string
+  sena_medio: MedioPago | null
+  saldo_medio: MedioPago | null
   categoria_id: string
   descripcion: string
 }
@@ -49,6 +53,8 @@ export function borradorVacio(): Borrador {
     cliente: CLIENTE_VACIO,
     sena: '',
     saldo: '',
+    sena_medio: null,
+    saldo_medio: null,
     categoria_id: '',
     descripcion: '',
   }
@@ -78,6 +84,8 @@ export function borradorDe(d: DetalleTarea): Borrador {
       : CLIENTE_VACIO,
     sena: importeATexto(t.sena),
     saldo: importeATexto(t.saldo),
+    sena_medio: t.sena_medio,
+    saldo_medio: t.saldo_medio,
     categoria_id: t.categoria_id ?? '',
     descripcion: t.descripcion ?? '',
   }
@@ -146,6 +154,8 @@ function camposTarea(b: Borrador) {
     categoria_id: b.categoria_id || null,
     sena: pedido ? (leerImporte(b.sena) ?? 0) : 0,
     saldo: pedido ? (leerImporte(b.saldo) ?? 0) : 0,
+    sena_medio: pedido ? b.sena_medio : null,
+    saldo_medio: pedido ? b.saldo_medio : null,
     importante: b.importante ?? false,
     urgencia_manual: b.urgencia_manual,
     estado: b.estado,
@@ -157,6 +167,12 @@ function camposTarea(b: Borrador) {
     fecha_inicio: aIso(b.inicio),
     fecha_entrega: aIso(b.entrega),
   }
+}
+
+/** En la OT no hay título aparte: es la primera línea del detalle. */
+export function tituloDeDetalle(detalle: string): string {
+  const linea = detalle.split('\n').find((l) => l.trim() !== '') ?? ''
+  return linea.trim().slice(0, 200)
 }
 
 export interface SubtareaNueva {

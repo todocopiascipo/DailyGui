@@ -16,7 +16,7 @@ import { AvisoSinConexion } from './AvisoSinConexion'
 import {
   Campo,
   CampoFechaHora,
-  CampoImporte,
+  CampoPago,
   CamposCliente,
   ElegirResponsables,
   Segmentado,
@@ -30,6 +30,8 @@ import { SelectorCategoria } from './SelectorCategoria'
 export interface EstadoCreacion {
   b: Borrador
   subtareas: SubtareaNueva[]
+  /** De qué formulario vino (para reabrir el mismo). Por defecto, la creación rápida. */
+  formulario?: 'rapida' | 'ot'
 }
 
 export interface AltaPedida {
@@ -137,7 +139,6 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
           onCambiar={(v) => cambiar('entrega', v)}
           ahora={ahora}
           error={errores.entrega}
-          conAtajos
         />
 
         <SiNo
@@ -180,16 +181,20 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
                   error={errores.cliente}
                 />
                 <div className="co-fila co-fila--campos">
-                  <CampoImporte
+                  <CampoPago
                     etiqueta="Seña"
                     valor={b.sena}
+                    medio={b.sena_medio}
                     onCambiar={(v) => cambiar('sena', v)}
+                    onCambiarMedio={(m) => cambiar('sena_medio', m)}
                     error={errores.sena}
                   />
-                  <CampoImporte
+                  <CampoPago
                     etiqueta="Saldo (lo que deben)"
                     valor={b.saldo}
+                    medio={b.saldo_medio}
                     onCambiar={(v) => cambiar('saldo', v)}
+                    onCambiarMedio={(m) => cambiar('saldo_medio', m)}
                     error={errores.saldo}
                   />
                 </div>

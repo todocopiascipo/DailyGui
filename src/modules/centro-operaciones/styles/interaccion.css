@@ -1,0 +1,257 @@
+/* =============================================================================
+ * Controles de la pantalla principal, arrastrar y soltar, pagos y papelera
+ * (especificación 6.3, 6.5, 7.2, 7.5, 7.12)
+ * ========================================================================== */
+
+/* ---------- Botones de abajo: "+", "OT" y Configuración ---------- */
+/* Casi transparentes y siempre a la vista (en táctil no dependen del hover). */
+.co-crear {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  gap: var(--co-space-1);
+  transform: translateX(-50%);
+}
+.co-boton-crear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 48px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: var(--co-radius-pill);
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.85);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+.co-boton-crear:hover {
+  background: rgb(255 255 255 / 0.18);
+  color: var(--co-blanco);
+}
+.co-boton-configurar {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgb(255 255 255 / 0.6);
+  cursor: pointer;
+}
+.co-boton-configurar:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--co-blanco);
+}
+/* La franja de abajo queda libre para estos controles. */
+.co-matriz .co-cuadrante--abajo {
+  padding-bottom: 68px;
+}
+@media (max-width: 639px) {
+  .co-crear {
+    left: auto;
+    right: 16px;
+    bottom: 16px;
+    transform: none;
+  }
+  .co-boton-crear {
+    background: rgb(30 46 112 / 0.92);
+  }
+  .co-boton-configurar {
+    top: 10px;
+    right: 10px;
+    bottom: auto;
+  }
+  .co-matriz-lista {
+    padding-bottom: 88px;
+  }
+}
+
+/* ---------- Arrastrar y soltar ---------- */
+.co-globo--arrastrable {
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* El lugar de donde se levantó queda atenuado (sin la animación de aparición,
+   que si no vuelve a dejarlo opaco). */
+.co-globo[data-arrastrando] {
+  opacity: 0.3;
+  animation: none;
+}
+.co-fantasma {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+}
+/* Levantar: un "pop" y queda un poco más grande, con sombra suave. */
+.co-globo--levantado {
+  height: 100%;
+  cursor: grabbing;
+  transform: scale(1.05);
+  box-shadow: 0 28px 56px -16px rgb(0 0 30 / 0.65);
+  animation: co-levantar 180ms ease-out both;
+}
+/* Sobre el tacho, el globo se achica: se ve que va a la papelera. */
+.co-fantasma--papelera .co-globo--levantado {
+  animation: none;
+  opacity: 0.7;
+  transform: scale(0.55);
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+@keyframes co-levantar {
+  0% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+.co-cuadrante[data-resaltado] {
+  border-radius: 24px;
+  background: rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.35);
+}
+
+/* El tacho: solo aparece mientras se arrastra. */
+.co-papelera {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  z-index: 65;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 24px;
+  border: 2px dashed rgb(255 255 255 / 0.45);
+  border-radius: var(--co-radius-pill);
+  background: rgb(20 24 70 / 0.85);
+  color: var(--co-blanco);
+  font-weight: 700;
+  transform: translateX(-50%);
+  animation: co-velo-entra 150ms ease-out both;
+  transition:
+    transform 150ms ease,
+    background 150ms ease;
+}
+.co-papelera[data-activa] {
+  border-style: solid;
+  border-color: #ff9d9d;
+  background: rgb(160 36 44 / 0.9);
+  transform: translateX(-50%) scale(1.08);
+}
+
+.co-aviso-flotante {
+  position: absolute;
+  bottom: 76px;
+  left: 50%;
+  z-index: 40;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: rgb(150 30 40 / 0.92);
+  font-size: 14px;
+  line-height: 20px;
+  transform: translateX(-50%);
+  animation: co-velo-entra 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-globo--levantado {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ---------- Pagos: seña y saldo con su medio ---------- */
+.co-pago {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.co-pago__medios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.co-pago__medio {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: var(--co-radius-pill);
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.co-pago__medio[aria-pressed='true'] {
+  border-color: var(--co-blanco);
+  background: var(--co-blanco);
+  color: var(--co-azul-profundo);
+}
+
+.co-boton-sutil--peligro {
+  color: #ffc2c2;
+}
+.co-pie-izquierda {
+  margin-right: auto;
+}
+
+/* ---------- Configuración › Papelera ---------- */
+.co-seccion--primera {
+  padding-top: 0;
+  border-top: 0;
+}
+.co-papelera-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--co-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-papelera-lista__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--co-space-2);
+  padding: 10px 12px 10px 16px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.05);
+}
+.co-papelera-lista__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.co-papelera-lista__texto strong {
+  overflow-wrap: anywhere;
+}

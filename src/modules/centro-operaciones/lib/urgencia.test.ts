@@ -3,6 +3,8 @@ import {
   compararParaCuadrante,
   cuadranteDe,
   esUrgente,
+  movimiento,
+  UMBRALES_POR_DEFECTO,
   urgenciaEfectiva,
   urgenciaEstimada,
   type Nivel,
@@ -115,5 +117,43 @@ describe('compararParaCuadrante', () => {
       { id: 'd', efectiva: 3, entrega: null },
     ]
     expect(items.sort(compararParaCuadrante).map((i) => i.id)).toEqual(['b', 'c', 'a', 'd'])
+  })
+})
+
+describe('movimiento entre cuadrantes', () => {
+  const ahora = new Date('2026-11-06T10:00:00-03:00')
+  const sinFecha = { importante: true, urgencia_manual: null, fecha_entrega: null }
+
+  it('en el mismo cuadrante no cambia nada', () => {
+    expect(movimiento(sinFecha, 'planificar', UMBRALES_POR_DEFECTO, ahora)).toBeNull()
+  })
+
+  it('a urgente: urgencia al menos 3; a no urgente: como mucho 2', () => {
+    expect(movimiento(sinFecha, 'hacer', UMBRALES_POR_DEFECTO, ahora)).toEqual({
+      importante: true,
+      urgencia_manual: 3,
+    })
+    // Vence hoy (4): a "no urgente" baja a 2.
+    const hoy = {
+      importante: true,
+      urgencia_manual: null,
+      fecha_entrega: '2026-11-06T18:00:00-03:00',
+    }
+    expect(movimiento(hoy, 'planificar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
+      importante: true,
+      urgencia_manual: 2,
+    })
+    // Ya urgente (4) y cambia solo de fila: conserva su urgencia.
+    expect(movimiento(hoy, 'delegar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
+      importante: false,
+      urgencia_manual: 4,
+    })
+  })
+
+  it('la fila de destino define la importancia', () => {
+    expect(movimiento(sinFecha, 'eliminar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
+      importante: false,
+      urgencia_manual: 1,
+    })
   })
 })

@@ -345,7 +345,9 @@ export type Database = {
           motivo_espera_detalle: string | null
           proyecto_id: string | null
           saldo: number
+          saldo_medio: Database['public']['Enums']['medio_pago'] | null
           sena: number
+          sena_medio: Database['public']['Enums']['medio_pago'] | null
           terminada_at: string | null
           tipo: Database['public']['Enums']['tipo_tarea']
           titulo: string
@@ -373,7 +375,9 @@ export type Database = {
           motivo_espera_detalle?: string | null
           proyecto_id?: string | null
           saldo?: number
+          saldo_medio?: Database['public']['Enums']['medio_pago'] | null
           sena?: number
+          sena_medio?: Database['public']['Enums']['medio_pago'] | null
           terminada_at?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
           titulo: string
@@ -401,7 +405,9 @@ export type Database = {
           motivo_espera_detalle?: string | null
           proyecto_id?: string | null
           saldo?: number
+          saldo_medio?: Database['public']['Enums']['medio_pago'] | null
           sena?: number
+          sena_medio?: Database['public']['Enums']['medio_pago'] | null
           terminada_at?: string | null
           tipo?: Database['public']['Enums']['tipo_tarea']
           titulo?: string
@@ -462,6 +468,7 @@ export type Database = {
     }
     Enums: {
       estado_proyecto: 'activo' | 'en_pausa' | 'terminado' | 'cancelado'
+      medio_pago: 'posnet' | 'efectivo' | 'transferencia'
       estado_tarea:
         'pendiente' | 'en_proceso' | 'en_espera' | 'terminada' | 'entregada' | 'cancelada'
       motivo_espera: 'archivo_cliente' | 'material' | 'pago' | 'proveedor' | 'otro'
@@ -589,6 +596,7 @@ export const Constants = {
   public: {
     Enums: {
       estado_proyecto: ['activo', 'en_pausa', 'terminado', 'cancelado'],
+      medio_pago: ['posnet', 'efectivo', 'transferencia'],
       estado_tarea: ['pendiente', 'en_proceso', 'en_espera', 'terminada', 'entregada', 'cancelada'],
       motivo_espera: ['archivo_cliente', 'material', 'pago', 'proveedor', 'otro'],
       tipo_categoria: ['pedido', 'interna', 'ambos'],

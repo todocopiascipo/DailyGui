@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { crearServidor } from './app.ts'
 import { abrirBase, type BaseDeDatos } from './db.ts'
-import { actualizarTarea, crearTarea } from './servicio.ts'
+import { actualizarTarea, crearTarea, purgarPapelera } from './servicio.ts'
 
 let db: BaseDeDatos
 let servidor: Server
@@ -281,6 +281,84 @@ describe('API de edición', () => {
       tarea: { id: 'x', titulo: 'Mal id', importante: true },
     })
     expect(c.estado).toBe(400)
+  })
+
+  it('medios de pago de la seña y del saldo', async () => {
+    const r = await api('POST', '/tareas', {
+      tarea: { titulo: 'OT', importante: true, sena_medio: 'posnet', saldo_medio: 'efectivo' },
+    })
+    expect(r.cuerpo.tarea).toMatchObject({ sena_medio: 'posnet', saldo_medio: 'efectivo' })
+    const e = await api('PATCH', `/tareas/${r.cuerpo.tarea.id}`, {
+      cambios: { saldo_medio: 'transferencia', sena_medio: null },
+    })
+    expect(e.cuerpo.tarea).toMatchObject({ sena_medio: null, saldo_medio: 'transferencia' })
+    const mal = await api('POST', '/tareas', {
+      tarea: { titulo: 'OT', importante: true, sena_medio: 'cheque' },
+    })
+    expect(mal.estado).toBe(400)
+  })
+
+  it('papelera: eliminar, restaurar, borrar definitivo y purga por plazo', async () => {
+    const ana = (await api('POST', '/personas', { nombre: 'Ana' })).cuerpo.id as string
+    const crear = async (titulo: string) =>
+      (await api('POST', '/tareas', { tarea: { titulo, importante: true } })).cuerpo.tarea
+        .id as string
+    const a = await crear('A')
+    const b = await crear('B')
+
+    const el = await api('POST', `/tareas/${a}/eliminar`, undefined, ana)
+    expect(el.cuerpo.tarea.eliminada_por).toBe(ana)
+    const titulos = async () =>
+      ((await api('GET', '/matriz')).cuerpo.tareas as { titulo: string }[]).map((t) => t.titulo)
+    expect(await titulos()).toEqual(['B'])
+    const pap = await api('GET', '/papelera')
+    expect(pap.cuerpo).toHaveLength(1)
+    expect(pap.cuerpo[0]).toMatchObject({ id: a, titulo: 'A', eliminada_por: 'Ana' })
+    // Se borra sola a los 30 días.
+    expect(Date.parse(pap.cuerpo[0].se_borra_el) - Date.parse(pap.cuerpo[0].eliminada_at)).toBe(
+      30 * 86_400_000,
+    )
+
+    // Solo se borra para siempre lo que está en la papelera.
+    expect((await api('DELETE', `/tareas/${b}`)).estado).toBe(400)
+
+    await api('POST', `/tareas/${a}/restaurar`)
+    expect((await titulos()).sort()).toEqual(['A', 'B'])
+    expect((await api('POST', `/tareas/${a}/restaurar`)).estado).toBe(400)
+    const hist = (await api('GET', `/tareas/${a}`)).cuerpo.eventos.map(
+      (e: { accion: string }) => e.accion,
+    )
+    expect(hist).toEqual(['restaurada', 'eliminada', 'creada'])
+
+    await api('POST', `/tareas/${b}/eliminar`)
+    expect((await api('DELETE', `/tareas/${b}`)).estado).toBe(200)
+    expect((await api('GET', `/tareas/${b}`)).estado).toBe(404)
+    const borrado = db
+      .prepare("SELECT cambios FROM eventos WHERE accion = 'borrada_definitiva'")
+      .get() as { cambios: string }
+    expect(JSON.parse(borrado.cambios)).toMatchObject({ tarea_id: b, titulo: 'B' })
+
+    // Purga: lo que lleva más de 30 días se borra solo.
+    await api('POST', `/tareas/${a}/eliminar`)
+    expect(purgarPapelera(db, new Date(Date.now() + 29 * 86_400_000))).toBe(0)
+    expect(purgarPapelera(db, new Date(Date.now() + 31 * 86_400_000))).toBe(1)
+    expect((await api('GET', '/papelera')).cuerpo).toEqual([])
+  })
+
+  it('catálogos: primero las personas asignadas más recientemente', async () => {
+    const uno = (await api('POST', '/personas', { nombre: 'Uno' })).cuerpo.id as string
+    const dos = (await api('POST', '/personas', { nombre: 'Dos' })).cuerpo.id as string
+    await api('POST', '/tareas', { tarea: { titulo: 'x', importante: true }, responsables: [dos] })
+    let nombres = (await api('GET', '/catalogos')).cuerpo.personas.map(
+      (p: { nombre: string }) => p.nombre,
+    )
+    expect(nombres).toEqual(['Dos', 'Uno'])
+    await new Promise((ok) => setTimeout(ok, 5))
+    await api('POST', '/tareas', { tarea: { titulo: 'y', importante: true }, responsables: [uno] })
+    nombres = (await api('GET', '/catalogos')).cuerpo.personas.map(
+      (p: { nombre: string }) => p.nombre,
+    )
+    expect(nombres).toEqual(['Uno', 'Dos'])
   })
 
   it('rechaza datos inválidos sin guardar nada', async () => {

@@ -519,40 +519,6 @@
   --co-globo-borde: rgb(255 255 255 / 0.5);
 }
 
-/* Botón casi transparente para crear (funciona sin hover, en táctil). */
-.co-boton-crear {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgb(255 255 255 / 0.28);
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.08);
-  color: rgb(255 255 255 / 0.85);
-  transform: translateX(-50%);
-  cursor: pointer;
-  transition:
-    background 150ms ease,
-    color 150ms ease;
-}
-.co-boton-crear:hover {
-  background: rgb(255 255 255 / 0.18);
-  color: var(--co-blanco);
-}
-@media (max-width: 639px) {
-  .co-boton-crear {
-    left: auto;
-    right: 16px;
-    bottom: 16px;
-    transform: none;
-    background: rgb(30 46 112 / 0.9);
-  }
-}
-
 /* ---------- Conexión (especificación 8) ---------- */
 /* Indicador discreto, abajo a la izquierda: informa sin alarmar. */
 .co-sin-conexion {

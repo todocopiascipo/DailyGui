@@ -27,6 +27,8 @@ const detalle: DetalleTarea = {
     cliente_id: 'c1',
     sena: 1500,
     saldo: 0,
+    sena_medio: null,
+    saldo_medio: null,
     importante: true,
     urgencia_manual: null,
     estado: 'pendiente',

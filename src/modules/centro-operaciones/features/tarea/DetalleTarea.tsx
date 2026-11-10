@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { useEffect, useId, useRef, useState } from 'react'
 import { aIso } from '../../lib/fechas'
@@ -8,7 +9,7 @@ import { borradorDe, cuerpoEdicion, validar, type Borrador, type Errores } from 
 import {
   Campo,
   CampoFechaHora,
-  CampoImporte,
+  CampoPago,
   CamposCliente,
   ElegirResponsables,
   Segmentado,
@@ -29,10 +30,12 @@ interface Props {
   ahora: Date
   umbrales: Umbrales
   onCerrar: () => void
+  /** Pide eliminar (con confirmación): la manda a la papelera. */
+  onEliminar?: (id: string) => void
 }
 
 /** Detalle de la tarea (especificación 7.4): consultar y modificar todo. */
-export function DetalleTarea({ id, ahora, umbrales, onCerrar }: Props) {
+export function DetalleTarea({ id, ahora, umbrales, onCerrar, onEliminar }: Props) {
   const detalle = useDetalle(id)
   if (!detalle.data) {
     return (
@@ -47,7 +50,15 @@ export function DetalleTarea({ id, ahora, umbrales, onCerrar }: Props) {
       </Dialogo>
     )
   }
-  return <Editor detalle={detalle.data} ahora={ahora} umbrales={umbrales} onCerrar={onCerrar} />
+  return (
+    <Editor
+      detalle={detalle.data}
+      ahora={ahora}
+      umbrales={umbrales}
+      onCerrar={onCerrar}
+      onEliminar={onEliminar}
+    />
+  )
 }
 
 const ESTADOS_EDITABLES = ['pendiente', 'en_proceso', 'en_espera'] as const
@@ -57,11 +68,13 @@ function Editor({
   ahora,
   umbrales,
   onCerrar,
+  onEliminar,
 }: {
   detalle: Detalle
   ahora: Date
   umbrales: Umbrales
   onCerrar: () => void
+  onEliminar?: (id: string) => void
 }) {
   const idForm = useId()
   const catalogos = useCatalogos()
@@ -127,6 +140,16 @@ function Editor({
       onCerrar={onCerrar}
       pie={
         <>
+          {onEliminar && (
+            <button
+              type="button"
+              className="co-boton-sutil co-boton-sutil--peligro co-pie-izquierda"
+              disabled={!conectado}
+              onClick={() => onEliminar(detalle.tarea.id)}
+            >
+              <Trash2 size={14} aria-hidden /> Eliminar
+            </button>
+          )}
           {editar.isError && (
             <p className="co-aviso" role="alert">
               No se pudo guardar: {editar.error.message}
@@ -191,7 +214,6 @@ function Editor({
           onCambiar={(v) => cambiar('entrega', v)}
           ahora={ahora}
           error={errores.entrega}
-          conAtajos
         />
 
         <CampoFechaHora
@@ -285,16 +307,20 @@ function Editor({
               error={errores.cliente}
             />
             <div className="co-fila co-fila--campos">
-              <CampoImporte
+              <CampoPago
                 etiqueta="Seña"
                 valor={b.sena}
+                medio={b.sena_medio}
                 onCambiar={(v) => cambiar('sena', v)}
+                onCambiarMedio={(m) => cambiar('sena_medio', m)}
                 error={errores.sena}
               />
-              <CampoImporte
+              <CampoPago
                 etiqueta="Saldo (lo que deben)"
                 valor={b.saldo}
+                medio={b.saldo_medio}
                 onCambiar={(v) => cambiar('saldo', v)}
+                onCambiarMedio={(m) => cambiar('saldo_medio', m)}
                 error={errores.saldo}
               />
             </div>

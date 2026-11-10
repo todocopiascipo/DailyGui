@@ -34,6 +34,8 @@ const COLUMNAS_TAREA = [
   'cliente_id',
   'sena',
   'saldo',
+  'sena_medio',
+  'saldo_medio',
   'importante',
   'urgencia_manual',
   'estado',
@@ -122,6 +124,8 @@ export function crearTarea(
       proyecto_id: null,
       sena: 0,
       saldo: 0,
+      sena_medio: null,
+      saldo_medio: null,
       urgencia_manual: null,
       estado: 'pendiente',
       estado_anterior: null,
@@ -482,6 +486,58 @@ export function crearPersona(
     )
     return { id, nombre, iniciales }
   })
+}
+
+// ---------------------------------------------------------------------------
+// Papelera (especificación 6.5): borrado lógico, restaurar, borrado definitivo
+// y purga automática pasado el plazo configurable.
+// ---------------------------------------------------------------------------
+
+/** Manda la tarea a la papelera. */
+export function eliminarTarea(db: BaseDeDatos, ctx: Contexto, id: string): Tarea {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  return actualizarTarea(db, { ...ctx, ahora }, id, { eliminada_at: ahora })
+}
+
+/** La saca de la papelera, tal como estaba. */
+export function restaurarTarea(db: BaseDeDatos, ctx: Contexto, id: string): Tarea {
+  const t = leerTarea(db, id)
+  if (!t) throw new ErrorNoEncontrado('La tarea no existe')
+  if (!t.eliminada_at) throw new ErrorValidacion('La tarea no está en la papelera')
+  return actualizarTarea(db, ctx, id, { eliminada_at: null })
+}
+
+/** Borra para siempre una tarea que está en la papelera. */
+export function borrarDefinitiva(db: BaseDeDatos, ctx: Contexto, id: string): void {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  enTransaccion(db, () => {
+    const t = leerTarea(db, id)
+    if (!t) throw new ErrorNoEncontrado('La tarea no existe')
+    if (!t.eliminada_at) throw new ErrorValidacion('Solo se borran tareas de la papelera')
+    const persona = personaValida(db, ctx.persona)
+    db.prepare('DELETE FROM tareas WHERE id = ?').run(id)
+    registrar(db, eventoDeTarea(t, null, persona), ahora)
+  })
+}
+
+/** Días que una tarea queda en la papelera (configuracion.papelera_dias, 30 por defecto). */
+export function diasPapelera(db: BaseDeDatos): number {
+  const fila = db.prepare("SELECT valor FROM configuracion WHERE clave = 'papelera_dias'").get() as
+    Fila | undefined
+  const n = fila ? Number(JSON.parse(String(fila.valor))) : NaN
+  return Number.isInteger(n) && n > 0 ? n : 30
+}
+
+/** Borra definitivamente lo que lleva en la papelera más del plazo. Devuelve cuántas. */
+export function purgarPapelera(db: BaseDeDatos, ahora = new Date()): number {
+  const limite = new Date(ahora.getTime() - diasPapelera(db) * 86_400_000).toISOString()
+  const vencidas = db
+    .prepare('SELECT id FROM tareas WHERE eliminada_at IS NOT NULL AND eliminada_at < ?')
+    .all(limite) as { id: string }[]
+  for (const { id } of vencidas) {
+    borrarDefinitiva(db, { persona: null, ahora: ahora.toISOString() }, id)
+  }
+  return vencidas.length
 }
 
 export class ErrorNoEncontrado extends Error {}

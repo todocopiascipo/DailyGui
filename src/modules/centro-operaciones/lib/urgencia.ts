@@ -115,3 +115,28 @@ export function compararParaCuadrante(
   const tb = b.entrega?.getTime() ?? Number.POSITIVE_INFINITY
   return ta - tb
 }
+
+/**
+ * Qué cambia al arrastrar una tarea a otro cuadrante (especificación 6.3):
+ * `importante` según la fila de destino y `urgencia_manual` según la columna
+ * (a urgente → max(efectiva, 3); a no urgente → min(efectiva, 2)).
+ * Devuelve null si ya está en ese cuadrante.
+ */
+export function movimiento(
+  tarea: { importante: boolean; urgencia_manual: number | null; fecha_entrega: string | null },
+  destino: Cuadrante,
+  umbrales: Umbrales,
+  ahora: Date,
+): { importante: boolean; urgencia_manual: Nivel } | null {
+  const entrega = tarea.fecha_entrega ? new Date(tarea.fecha_entrega) : null
+  const efectiva = urgenciaEfectiva(
+    tarea.urgencia_manual,
+    urgenciaEstimada(entrega, ahora, umbrales),
+  )
+  if (cuadranteDe(tarea.importante, esUrgente(efectiva)) === destino) return null
+  const urgente = destino === 'hacer' || destino === 'delegar'
+  return {
+    importante: destino === 'hacer' || destino === 'planificar',
+    urgencia_manual: (urgente ? Math.max(efectiva, 3) : Math.min(efectiva, 2)) as Nivel,
+  }
+}

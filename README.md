@@ -29,6 +29,12 @@ En la matriz:
 
 - **Crear una tarea:** tecla `N` (en la PC) o el botón `+` casi transparente
   abajo al centro (en el celular, abajo a la derecha).
+- **Orden de trabajo:** tecla `O` o el botón `OT`, al lado del `+`. Tiene la
+  forma de la OT de papel; la primera línea del detalle es el título.
+- **Mover de cuadrante:** arrastrar el globo (en el iPad, mantener presionado y
+  arrastrar). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
+  recuperar desde Configuración (engranaje abajo a la derecha) › Papelera
+  durante 30 días. Después se borra solo.
 - **Ver y editar una tarea:** tocar su globo. Las subtareas se guardan al
   momento; el resto, con "Guardar cambios".
 - Las personas del equipo se agregan con "+ Persona" dentro del formulario.
@@ -54,7 +60,9 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
 - API (`server/app.ts`): `GET /api/matriz`, `GET /api/catalogos`,
   `GET /api/clientes?telefono=`, `POST /api/personas`, `POST /api/tareas`,
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
-  `PATCH|DELETE /api/subtareas/:id`. Todo lo que llega se valida en
+  `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
+  `POST /api/tareas/:id/eliminar|restaurar`, `DELETE /api/tareas/:id` (solo
+  desde la papelera). Todo lo que llega se valida en
   `server/validar.ts`.
 
 ## Comandos

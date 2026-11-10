@@ -1,16 +1,18 @@
 import { expect, test, type Page } from '@playwright/test'
+import { limpiar, unico } from './utiles'
 
 // Crear y editar contra el servidor de pruebas (base en memoria compartida por
 // los dos proyectos): cada prueba usa nombres únicos.
 const cuadrante = (page: Page, id: string) => page.locator(`[data-cuadrante="${id}"]`)
 const globo = (page: Page, titulo: string) =>
   page.getByTestId('co-globo').filter({ hasText: titulo })
-const unico = (texto: string) => `${texto} ${test.info().project.name} ${Date.now().toString(36)}`
 
 async function crearPorApi(page: Page, tarea: Record<string, unknown>) {
   const r = await page.request.post('/api/tareas', { data: { tarea } })
   expect(r.status()).toBe(201)
 }
+
+test.afterEach(({ request }) => limpiar(request))
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -69,7 +71,7 @@ test('editar en el detalle: importancia, urgencia, cliente y seña', async ({ pa
   await panel.getByRole('slider').fill('4')
   await panel.getByLabel('Cliente (nombre y apellido)').fill('Cliente de prueba')
   await panel.getByLabel('Teléfono').fill('2990000000')
-  await panel.getByLabel('Seña').fill('1.500')
+  await panel.getByLabel('Seña', { exact: true }).fill('1.500')
   await panel.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(panel.getByText('Cambios guardados')).toBeVisible()
   await expect(panel.getByText(/Editó/).first()).toBeVisible()
@@ -83,7 +85,7 @@ test('editar en el detalle: importancia, urgencia, cliente y seña', async ({ pa
   await page.reload()
   await page.getByRole('button', { name: `Abrir ${titulo}` }).click()
   await expect(panel.getByLabel('Cliente (nombre y apellido)')).toHaveValue('Cliente de prueba')
-  await expect(panel.getByLabel('Seña')).toHaveValue('1500')
+  await expect(panel.getByLabel('Seña', { exact: true })).toHaveValue('1500')
   await expect(panel.getByText('Urgencia: 4 (manual)')).toBeVisible()
 })
 

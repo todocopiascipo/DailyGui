@@ -1,11 +1,21 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { crearCanal, type Aviso } from './canal.ts'
-import { buscarClientes, cargarCatalogos, cargarDetalle, cargarMatriz } from './consultas.ts'
+import {
+  buscarClientes,
+  cargarCatalogos,
+  cargarDetalle,
+  cargarMatriz,
+  cargarPapelera,
+} from './consultas.ts'
 import type { BaseDeDatos } from './db.ts'
 import type { Pista } from './reglas.ts'
 import {
   actualizarSubtarea,
   actualizarTarea,
+  borrarDefinitiva,
+  diasPapelera,
+  eliminarTarea,
+  restaurarTarea,
   crearPersona,
   crearSubtarea,
   crearTarea,
@@ -38,6 +48,31 @@ const RUTAS: [string, string, Manejador][] = [
   ['GET', '/api/salud', () => ({ ok: true })],
   ['GET', '/api/matriz', ({ db }) => cargarMatriz(db)],
   ['GET', '/api/catalogos', ({ db }) => cargarCatalogos(db)],
+  ['GET', '/api/papelera', ({ db }) => cargarPapelera(db, diasPapelera(db))],
+  [
+    'POST',
+    '/api/tareas/:id/eliminar',
+    ({ db, ctx, params }) => {
+      eliminarTarea(db, ctx, params.id!)
+      return cargarDetalle(db, params.id!)
+    },
+  ],
+  [
+    'POST',
+    '/api/tareas/:id/restaurar',
+    ({ db, ctx, params }) => {
+      restaurarTarea(db, ctx, params.id!)
+      return cargarDetalle(db, params.id!)
+    },
+  ],
+  [
+    'DELETE',
+    '/api/tareas/:id',
+    ({ db, ctx, params }) => {
+      borrarDefinitiva(db, ctx, params.id!)
+      return { ok: true }
+    },
+  ],
   ['GET', '/api/clientes', ({ db, query }) => buscarClientes(db, query.get('telefono') ?? '')],
   ['POST', '/api/personas', ({ db, cuerpo }) => crearPersona(db, validarNuevaPersona(cuerpo))],
   [

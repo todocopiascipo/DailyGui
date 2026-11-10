@@ -2,6 +2,7 @@
  * Validación de lo que llega por la API. Solo se aceptan los campos editables,
  * con su tipo y rango; la base vuelve a controlar todo con sus restricciones.
  */
+import type { Tarea } from './reglas.ts'
 import type { CambiosTarea, DatosCliente, DatosNuevaTarea, ExtrasEdicion } from './servicio.ts'
 import { ErrorValidacion } from './servicio.ts'
 
@@ -10,6 +11,11 @@ type Objeto = Record<string, unknown>
 const ESTADOS = ['pendiente', 'en_proceso', 'en_espera', 'terminada', 'entregada', 'cancelada']
 const MOTIVOS = ['archivo_cliente', 'material', 'pago', 'proveedor', 'otro']
 const TIPOS = ['pedido', 'interna']
+const MEDIOS = ['posnet', 'efectivo', 'transferencia']
+
+function medio(v: unknown, nombre: string): Tarea['sena_medio'] {
+  return v === null || v === undefined || v === '' ? null : opcion(v, MEDIOS, nombre)
+}
 
 function falla(mensaje: string): never {
   throw new ErrorValidacion(mensaje)
@@ -76,6 +82,8 @@ function camposTarea(o: Objeto): CambiosTarea {
   if ('categoria_id' in o) c.categoria_id = idOpcional(o.categoria_id, 'Categoría')
   if ('sena' in o) c.sena = importe(o.sena, 'Seña')
   if ('saldo' in o) c.saldo = importe(o.saldo, 'Saldo')
+  if ('sena_medio' in o) c.sena_medio = medio(o.sena_medio, 'Medio de pago de la seña')
+  if ('saldo_medio' in o) c.saldo_medio = medio(o.saldo_medio, 'Medio de pago del saldo')
   if ('importante' in o) c.importante = booleano(o.importante, 'Importante')
   if ('urgencia_manual' in o) {
     const u = o.urgencia_manual

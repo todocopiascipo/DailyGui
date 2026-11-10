@@ -31,6 +31,7 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
     void qc.invalidateQueries({
       queryKey: aviso.tarea_id ? ['tarea', aviso.tarea_id] : ['tarea'],
     })
+    void qc.invalidateQueries({ queryKey: ['papelera'] })
   }
   if (aviso.recursos.includes('personas')) {
     void qc.invalidateQueries({ queryKey: ['catalogos'] })
