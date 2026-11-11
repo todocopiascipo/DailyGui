@@ -6,6 +6,7 @@
  */
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase, usaSupabase } from './supabase'
 
 export type EstadoConexion = 'conectando' | 'conectado' | 'sin_conexion'
 
@@ -43,8 +44,72 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
   }
 }
 
-/** Abre el canal y mantiene el estado de la conexión. */
-export function useTiempoReal(): EstadoConexion {
+/**
+ * Abre el canal de avisos y mantiene el estado de la conexión: el del
+ * servidor local en desarrollo, el de Supabase en la app publicada.
+ */
+export const useTiempoReal: () => EstadoConexion = usaSupabase
+  ? useTiempoRealSupabase
+  : useTiempoRealLocal
+
+/** Canal "co-cambios" de Supabase (lo alimentan los triggers de la base). */
+function useTiempoRealSupabase(): EstadoConexion {
+  const qc = useQueryClient()
+  const [estado, setEstado] = useState<EstadoConexion>('conectando')
+
+  useEffect(() => {
+    const sb = supabase()
+    let huboCorte = false
+    let activo = true
+    const resincronizar = () => void qc.invalidateQueries()
+    const caida = () => {
+      if (!activo) return
+      huboCorte = true
+      setEstado('sin_conexion')
+    }
+
+    const canal = sb
+      .channel('co-cambios')
+      .on('broadcast', { event: 'cambio' }, ({ payload }) => {
+        try {
+          aplicarAviso(qc, payload as Aviso)
+        } catch {
+          resincronizar()
+        }
+      })
+      .subscribe((s) => {
+        if (!activo) return
+        if (s === 'SUBSCRIBED') {
+          setEstado('conectado')
+          // Lo que pasó mientras no había conexión se trae de nuevo.
+          if (huboCorte) resincronizar()
+          huboCorte = false
+        } else {
+          // CHANNEL_ERROR, TIMED_OUT o CLOSED: Supabase reintenta solo.
+          caida()
+        }
+      })
+
+    const alVolverAPantalla = () => {
+      if (document.visibilityState === 'visible') resincronizar()
+    }
+    window.addEventListener('offline', caida)
+    window.addEventListener('online', resincronizar)
+    document.addEventListener('visibilitychange', alVolverAPantalla)
+    return () => {
+      activo = false
+      void sb.removeChannel(canal)
+      window.removeEventListener('offline', caida)
+      window.removeEventListener('online', resincronizar)
+      document.removeEventListener('visibilitychange', alVolverAPantalla)
+    }
+  }, [qc])
+
+  return estado
+}
+
+/** Canal /api/cambios del servidor local (Server-Sent Events con latido). */
+function useTiempoRealLocal(): EstadoConexion {
   const qc = useQueryClient()
   const [estado, setEstado] = useState<EstadoConexion>('conectando')
 

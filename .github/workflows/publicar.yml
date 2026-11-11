@@ -1,0 +1,51 @@
+# Publica la app en GitHub Pages cada vez que se sube algo a main.
+# La app publicada usa Supabase (no el servidor local de desarrollo).
+# La clave es la "publicable" de Supabase: está hecha para ir en el navegador;
+# los datos los protege la base. La clave secreta nunca va acá.
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Si una prueba falla, no se publica nada.
+      - run: npm test
+      - run: npm run build
+        env:
+          CO_BASE: /DailyGui/
+          VITE_CO_BACKEND: supabase
+          VITE_SUPABASE_URL: https://ywlqzsmflpgsrlrxcgth.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_jUjwlrW2x70cAqJP4cpn1A_lU9A_75a
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacion.outputs.page_url }}
+    steps:
+      - id: publicacion
+        uses: actions/deploy-pages@v4

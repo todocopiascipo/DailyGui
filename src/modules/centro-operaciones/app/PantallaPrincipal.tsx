@@ -26,8 +26,10 @@ import { QuienSoy } from '../features/persona/QuienSoy'
 import { useCatalogos, useCrearTarea, useTareasProvisorias } from '../features/tarea/datos'
 import { DetalleTarea } from '../features/tarea/DetalleTarea'
 import { OrdenDeTrabajo } from '../features/tarea/OrdenDeTrabajo'
+import { ErrorApi } from '../lib/api'
 import { lanzarConfeti } from '../lib/confeti'
 import { armarMensaje, copiarTexto } from '../lib/mensaje'
+import { usaSupabase } from '../lib/supabase'
 import { ContextoConexion, useTiempoReal, type EstadoConexion } from '../lib/tiempoReal'
 import { movimiento } from '../lib/urgencia'
 
@@ -302,7 +304,11 @@ export function PantallaPrincipal() {
   if (!matriz.data) {
     return (
       <p role="alert" className="co-mensaje-central">
-        No se pudo conectar con el servidor del local. Revisá que esté encendido.
+        {matriz.error instanceof ErrorApi && matriz.error.estado === 403
+          ? 'La app todavía no tiene el acceso habilitado.'
+          : usaSupabase
+            ? 'No se pudo conectar. Revisá la conexión a internet.'
+            : 'No se pudo conectar con el servidor del local. Revisá que esté encendido.'}
       </p>
     )
   }

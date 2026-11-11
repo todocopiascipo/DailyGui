@@ -7,6 +7,8 @@ const puertoWeb = Number(process.env.CO_PUERTO_WEB ?? 5173)
 const puertoApi = Number(process.env.CO_PUERTO_API ?? 5174)
 
 export default defineConfig({
+  // En GitHub Pages la app vive en /DailyGui/ (lo define el proceso de publicación).
+  base: process.env.CO_BASE ?? '/',
   plugins: [react(), tailwindcss()],
   server: {
     port: puertoWeb,
