@@ -16,8 +16,11 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 - Trabajar **por fases** (sección 14 de la especificación) y **esperar su
   aprobación** al terminar cada una. No improvisar funciones ni inventar datos
   del negocio (nombres, precios, dirección, horarios, textos comerciales).
-- Al final de cada fase: pruebas en verde, documentación al día y un commit
-  local con el detalle de lo hecho.
+- Al final de cada fase: pruebas en verde, documentación al día, un commit con
+  el detalle de lo hecho y **push a `main`** de
+  https://github.com/todocopiascipo/DailyGui (pedido del usuario: lo sigue desde
+  la PC del trabajo). El repo es **público**: nunca subir claves ni datos
+  (`.env.local` y `datos/` están en `.gitignore`).
 - Le gusta **ver el progreso en vivo**: dejar corriendo `npm run dev` (vista
   previa) y pasarle las direcciones (local y de la red).
 - Para revisar algo visualmente sin tocar sus datos, usar una copia aparte con
