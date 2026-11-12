@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Download, Plus } from 'lucide-react'
 import { useId, useState } from 'react'
 import { pedir } from '../../lib/api'
+import { estadoNotificaciones, type EstadoNotificaciones } from '../../lib/notificaciones'
+import { guardarPreferencia, usePreferencia } from '../../lib/preferencias'
 import { diaLocal } from '../../lib/tiempo'
 import { useConectado } from '../../lib/tiempoReal'
 import {
@@ -603,6 +605,68 @@ export function SeccionRespaldo() {
         </p>
       )}
       <AvisoError error={error} />
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Este dispositivo: modo pantalla y notificaciones (no se comparten).
+// ---------------------------------------------------------------------------
+const TEXTO_NOTIFICACIONES: Record<EstadoNotificaciones, string> = {
+  'no-soportadas':
+    'Este navegador no permite notificaciones acá. En el iPad funcionan con la app instalada en la pantalla de inicio (Compartir › Agregar a inicio).',
+  pedir: 'Avisa cuando te asignan una tarea, cuando una se entrega hoy y cuando se vence.',
+  bloqueadas:
+    'El navegador las tiene bloqueadas para esta página. Se habilitan desde el candado de la barra de direcciones.',
+  permitidas: 'Avisa cuando te asignan una tarea, cuando una se entrega hoy y cuando se vence.',
+}
+
+export function SeccionDispositivo() {
+  const modoPantalla = usePreferencia('modo-pantalla')
+  const notificaciones = usePreferencia('notificaciones')
+  const [estado, setEstado] = useState(estadoNotificaciones)
+  const activas = notificaciones && estado === 'permitidas'
+  const activar = async () => {
+    if (estado === 'pedir') {
+      const r = await Notification.requestPermission().catch(() => 'denied' as const)
+      const nuevo = estadoNotificaciones()
+      setEstado(nuevo)
+      if (r !== 'granted') return
+    }
+    guardarPreferencia('notificaciones', true)
+  }
+  return (
+    <section className="co-seccion" aria-labelledby="co-titulo-dispositivo">
+      <h3 id="co-titulo-dispositivo" className="co-subtitulo">
+        Este dispositivo
+      </h3>
+      <label className="co-interruptor">
+        <input
+          type="checkbox"
+          className="co-casilla"
+          checked={modoPantalla}
+          onChange={(e) => guardarPreferencia('modo-pantalla', e.target.checked)}
+        />
+        <span>
+          Modo pantalla
+          <span className="co-texto-suave co-bloque">
+            Para el monitor: letra más grande, pantalla siempre encendida, cursor oculto y vuelve
+            sola a la matriz si nadie la toca. También con ?modo=pantalla en la dirección.
+          </span>
+        </span>
+      </label>
+      <div className="co-grupo">
+        <p className="co-texto-suave">{TEXTO_NOTIFICACIONES[estado]}</p>
+        {estado !== 'no-soportadas' && estado !== 'bloqueadas' && (
+          <button
+            type="button"
+            className="co-boton-sutil co-alinear-inicio"
+            onClick={() => (activas ? guardarPreferencia('notificaciones', false) : void activar())}
+          >
+            {activas ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+          </button>
+        )}
+      </div>
     </section>
   )
 }

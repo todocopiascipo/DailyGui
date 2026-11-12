@@ -14,3 +14,11 @@ createRoot(root).render(
     <CentroOperaciones />
   </StrictMode>,
 )
+
+// App instalable (PWA): solo en el build publicado (en desarrollo molestaría
+// con archivos guardados viejos).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
+  })
+}

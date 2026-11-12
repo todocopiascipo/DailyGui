@@ -38,17 +38,18 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 
 ## Estado (al 2026-11-12)
 
-Hechas: Fases 0–9 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
+Hechas: Fases 0–10 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
 matriz, crear/editar, tiempo real, arrastrar y soltar con tacho y papelera,
 OT con forma de la de papel, terminar/entregar/devolver, "Hechas hoy",
 "Copiar mensaje", "¿Quién soy?" con PIN, "Mis tareas"; "+" = tareas internas
 simples con "Pedido relacionado"; "Urgente: Sí / No / Por fecha" al crear;
 migración a Supabase y publicación en GitHub Pages con acceso por link secreto;
 proyectos internos (Fase 8, decisión 11 resuelta: ver DECISIONES); menú del
-borde izquierdo, historial global, configuración completa y respaldo (Fase 9).
+borde izquierdo, historial global, configuración completa y respaldo (Fase 9);
+modo pantalla, PWA instalable (ícono provisorio) y notificaciones con la app
+abierta (Fase 10).
 
-**Siguiente: Fase 10** (modo pantalla, PWA, notificaciones con la app abierta)
-y 11 (cierre). El usuario autorizó hacerlas seguidas (2026-11-12).
+**Siguiente: Fase 11** (cierre). El usuario autorizó hacerla seguida (2026-11-12).
 
 Advisors de Supabase: los avisos "anon/authenticated puede ejecutar SECURITY
 DEFINER" y "RLS sin políticas" en `privado.*` son intencionales (acceso por

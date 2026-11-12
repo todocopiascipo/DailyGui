@@ -25,3 +25,19 @@ describe('acceso por link secreto', () => {
     expect(claveDeAcceso()).toBeNull()
   })
 })
+
+describe('clave escrita a mano (app instalada en el iPad)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    window.localStorage.clear()
+  })
+
+  it('acepta el link completo o solo la clave; rechaza lo que no es', async () => {
+    const { guardarClaveManual, claveDeAcceso } = await import('./acceso')
+    expect(guardarClaveManual('corta')).toBe(false)
+    expect(guardarClaveManual(' https://x/DailyGui/#acceso=clave-de-prueba-larga-456 ')).toBe(true)
+    expect(claveDeAcceso()).toBe('clave-de-prueba-larga-456')
+    expect(guardarClaveManual('otra-clave-de-prueba-larga-789')).toBe(true)
+    expect(window.localStorage.getItem('co-acceso')).toBe('otra-clave-de-prueba-larga-789')
+  })
+})

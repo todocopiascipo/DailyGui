@@ -44,6 +44,10 @@ import { armarMensaje, copiarTexto } from '../lib/mensaje'
 import { usaSupabase } from '../lib/supabase'
 import { ContextoConexion, useTiempoReal, type EstadoConexion } from '../lib/tiempoReal'
 import { movimiento } from '../lib/urgencia'
+import { useModoPantalla } from '../lib/modoPantalla'
+import { useNotificaciones } from '../lib/notificaciones'
+import { leerModoDeLaDireccion, usePreferencia } from '../lib/preferencias'
+import { SinAcceso } from './SinAcceso'
 
 // Configuración se usa poco: se carga recién cuando se abre.
 const Configuracion = lazy(() => import('../features/configuracion/Configuracion'))
@@ -120,6 +124,28 @@ export function PantallaPrincipal() {
   const [eligiendo, setEligiendo] = useState<{ motivo?: string; despues?: () => void } | null>(null)
   const [aviso, setAviso] = useState<Aviso | null>(null)
   const raiz = useRef<HTMLDivElement>(null)
+  // ?modo=pantalla deja el modo pantalla elegido en este dispositivo.
+  useState(leerModoDeLaDireccion)
+  const modoPantalla = usePreferencia('modo-pantalla')
+  const notificaciones = usePreferencia('notificaciones')
+  // Modo pantalla: si nadie toca nada por un rato, vuelve a la vista general.
+  const { cursorOculto } = useModoPantalla(modoPantalla, () => {
+    setCreando(null)
+    setAbierta(null)
+    setPorConfirmar(null)
+    setConfigurando(false)
+    setViendoMisTareas(false)
+    setViendoProyectos(false)
+    setViendoHistorial(false)
+    setEligiendo(null)
+  })
+  useNotificaciones({
+    activas: notificaciones,
+    tareas: matriz.data?.tareas,
+    persona: quien.persona,
+    ahora,
+    onAbrir: setAbierta,
+  })
   const hayVentana =
     creando !== null ||
     abierta !== null ||
@@ -328,13 +354,12 @@ export function PantallaPrincipal() {
   // Sin datos para mostrar: el servidor nunca respondió. (Si ya hay datos y se
   // corta, la matriz sigue a la vista con el indicador "Sin conexión".)
   if (!matriz.data) {
+    if (matriz.error instanceof ErrorApi && matriz.error.estado === 403) return <SinAcceso />
     return (
       <p role="alert" className="co-mensaje-central">
-        {matriz.error instanceof ErrorApi && matriz.error.estado === 403
-          ? 'Para usar la app en este dispositivo, abrí el link de acceso del local.'
-          : usaSupabase
-            ? 'No se pudo conectar. Revisá la conexión a internet.'
-            : 'No se pudo conectar con el servidor del local. Revisá que esté encendido.'}
+        {usaSupabase
+          ? 'No se pudo conectar. Revisá la conexión a internet.'
+          : 'No se pudo conectar con el servidor del local. Revisá que esté encendido.'}
       </p>
     )
   }
@@ -407,7 +432,12 @@ export function PantallaPrincipal() {
     <ContextoConexion.Provider value={conexion}>
       <ContextoPersona.Provider value={{ persona: quien.persona, resaltar: quien.resaltar }}>
         <ContextoAcciones.Provider value={ejecutar}>
-          <div ref={raiz} className="co-contenido">
+          <div
+            ref={raiz}
+            className="co-contenido"
+            data-modo-pantalla={modoPantalla || undefined}
+            data-cursor-oculto={cursorOculto || undefined}
+          >
             <ProveedorArrastre onSoltar={soltar}>
               <Matriz
                 tareas={tareas}

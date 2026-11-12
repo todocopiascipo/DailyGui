@@ -64,6 +64,17 @@ En la matriz:
 - **Configuración** (engranaje abajo a la derecha): personas, categorías,
   urgencia y cuadrantes, confeti y mensaje, papelera (y cuántos días guarda) y
   **Exportar respaldo** (descarga un archivo con todo, sin los PIN).
+- **Modo pantalla (monitor):** abrir la app con `?modo=pantalla` al final de
+  la dirección (o Configuración › Este dispositivo). Letra más grande, pantalla
+  siempre encendida, cursor oculto y vuelve sola a la matriz si nadie la toca.
+  `?modo=normal` lo apaga.
+- **Instalarla (PWA):** en el iPad, desde Safari: Compartir › Agregar a
+  inicio. En la PC (Chrome o Edge): el ícono de instalar en la barra de
+  direcciones. En el iPad instalado, la primera vez pide pegar el link de
+  acceso (no comparte lo guardado con Safari).
+- **Notificaciones:** Configuración › Este dispositivo › Activar
+  notificaciones. Avisan con la app abierta: tarea asignada, se entrega hoy y
+  vencida. En el iPad, solo con la app instalada.
 - **Hechas hoy:** acercando el mouse al borde derecho (o la pestaña del borde
   en el iPad): lo terminado y lo entregado en el día, con "Devolver".
 - **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en

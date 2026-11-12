@@ -37,3 +37,16 @@ export function claveDeAcceso(): string | null {
   }
   return enMemoria
 }
+
+/**
+ * Guardar la clave escrita a mano (o pegada). Sirve en el iPad con la app
+ * instalada en la pantalla de inicio, que no comparte lo guardado con Safari.
+ * Acepta el link completo o solo la clave.
+ */
+export function guardarClaveManual(texto: string): boolean {
+  const t = texto.trim()
+  const clave = t.includes('acceso=') ? new URLSearchParams(t.split('#')[1] ?? '').get('acceso') : t
+  if (!clave || clave.length < 20 || clave.length > 200) return false
+  guardar(clave)
+  return true
+}

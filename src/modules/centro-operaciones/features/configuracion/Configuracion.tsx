@@ -17,6 +17,7 @@ import { Dialogo } from '../tarea/Dialogo'
 import { SeccionAvisos } from './Avisos'
 import {
   DiasPapelera,
+  SeccionDispositivo,
   SeccionCategorias,
   SeccionPersonas,
   SeccionRespaldo,
@@ -65,6 +66,7 @@ export default function Configuracion({ ahora, onCerrar }: { ahora: Date; onCerr
     <>
       <Dialogo titulo="Configuración" variante="amplia" sinGuardar={false} onCerrar={onCerrar}>
         <AvisoSinConexion />
+        <SeccionDispositivo />
         <SeccionPersonas />
         <SeccionCategorias />
         <SeccionUrgencia />
