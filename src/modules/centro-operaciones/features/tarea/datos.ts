@@ -26,6 +26,8 @@ function useAlGuardar() {
   const qc = useQueryClient()
   return (d: DetalleTarea) => {
     qc.setQueryData(['tarea', d.tarea.id], d)
+    void qc.invalidateQueries({ queryKey: ['proyectos'] })
+    void qc.invalidateQueries({ queryKey: ['proyecto'] })
     return qc.invalidateQueries({ queryKey: ['matriz'] })
   }
 }

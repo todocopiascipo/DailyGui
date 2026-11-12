@@ -4,8 +4,24 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "prueba",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev.mjs"
+      ],
+      "port": 5190,
+      "env": {
+        "CO_PUERTO_WEB": "5190",
+        "CO_PUERTO_API": "5191",
+        "CO_DB_RUTA": ":memory:"
+      }
     }
   ]
 }

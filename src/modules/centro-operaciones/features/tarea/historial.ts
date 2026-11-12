@@ -33,7 +33,19 @@ const CAMPOS: Record<string, string> = {
   motivo_espera_detalle: 'motivo de espera',
   fecha_inicio: 'hora de inicio',
   fecha_entrega: 'entrega',
-  mostrar_en_matriz: 'visibilidad',
+  mostrar_en_matriz: 'visibilidad en la matriz',
+  proyecto_id: 'proyecto',
+  pedido_id: 'pedido relacionado',
+  nombre: 'nombre',
+  fecha_objetivo: 'fecha objetivo',
+  responsable_id: 'responsable',
+}
+
+const NOMBRES_ESTADO_PROYECTO: Record<string, string> = {
+  activo: 'Activo',
+  en_pausa: 'En pausa',
+  terminado: 'Terminado',
+  cancelado: 'Cancelado',
 }
 
 function lista(v: unknown): string {
@@ -101,6 +113,22 @@ export function describirEvento(e: EventoDetalle): string {
       ]
       return campos.length > 0 ? `Editó ${campos.join(', ')}` : 'Editó la tarea'
     }
+    case 'proyecto_creado':
+      return 'Creó el proyecto'
+    case 'proyecto_estado': {
+      const c = cambio(e, 'estado')
+      return c
+        ? `Estado del proyecto: ${NOMBRES_ESTADO_PROYECTO[String(c.antes)] ?? '—'} → ${NOMBRES_ESTADO_PROYECTO[String(c.despues)] ?? '—'}`
+        : 'Cambió el estado del proyecto'
+    }
+    case 'proyecto_editado': {
+      const campos = Object.keys(e.cambios)
+        .filter((k) => cambio(e, k))
+        .map((k) => CAMPOS[k] ?? k)
+      return campos.length > 0 ? `Editó el proyecto: ${campos.join(', ')}` : 'Editó el proyecto'
+    }
+    case 'proyecto_eliminado':
+      return 'Borró el proyecto'
     default:
       return 'Modificó la tarea'
   }

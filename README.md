@@ -49,6 +49,12 @@ En la matriz:
   usa; lo que se hace queda a su nombre en el historial. Con el ojo se
   resaltan sus tareas, y "Mis tareas" muestra qué hacer ahora, la línea del
   día y el paso a paso. El PIN es opcional.
+- **Proyectos:** botón "Proyectos" abajo a la izquierda. Lista de proyectos
+  internos con estado, responsable, fecha objetivo y avance; dentro de cada uno,
+  sus datos, sus tareas (nueva, abrir, terminar, subir o bajar) e historial.
+  Una tarea de proyecto aparece en la matriz sola cuando tiene fecha de entrega
+  o está en proceso; el botón de cuadrícula ("Mostrar en la matriz") lo cambia
+  a mano. Con el "+", el proyecto se elige en "Más datos".
 - **Hechas hoy:** acercando el mouse al borde derecho (o la pestaña del borde
   en el iPad): lo terminado y lo entregado en el día, con "Devolver".
 - **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en
@@ -77,7 +83,9 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
-  `GET /api/hechas?desde=`, `PUT /api/configuracion/:clave` (confeti y
+  `GET /api/hechas?desde=`, `GET|POST /api/proyectos`,
+  `GET|PATCH|DELETE /api/proyectos/:id`, `PUT /api/proyectos/:id/orden`,
+  `PUT /api/configuracion/:clave` (confeti y
   plantilla), `DELETE /api/tareas/:id` (solo
   desde la papelera). Todo lo que llega se valida en
   `server/validar.ts`.

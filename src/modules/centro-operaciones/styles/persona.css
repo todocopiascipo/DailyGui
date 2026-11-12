@@ -375,3 +375,14 @@
   font-weight: 800;
   color: var(--co-blanco);
 }
+/* Con "Mis tareas" y "Proyectos", la fila llega al "+" del centro: en
+   pantallas medianas (iPad) quedan solo los iconos. */
+@media (max-width: 1279px) {
+  .co-boton-redondo--texto {
+    width: 44px;
+    padding: 0;
+  }
+  .co-boton-redondo__texto {
+    display: none;
+  }
+}

@@ -161,3 +161,37 @@ describe('cuerpo para la API', () => {
     expect(cuerpoEdicion(b, detalle)).toEqual({ cliente: null })
   })
 })
+
+describe('proyectos (decisión 11)', () => {
+  const deProyecto: DetalleTarea = {
+    ...detalle,
+    cliente: null,
+    tarea: {
+      ...detalle.tarea,
+      tipo: 'interna',
+      cliente_id: null,
+      sena: 0,
+      proyecto_id: 'p1',
+      mostrar_en_matriz: false,
+    },
+  }
+
+  it('al crear, el proyecto viaja y el interruptor no (decide la regla automática)', () => {
+    const c = cuerpoNuevaTarea(lleno({ tipo: 'interna', proyecto_id: 'p1' }), [])
+    expect(c.tarea.proyecto_id).toBe('p1')
+    expect('mostrar_en_matriz' in c.tarea).toBe(false)
+    // Un pedido nunca lleva proyecto.
+    expect(cuerpoNuevaTarea(lleno({ proyecto_id: 'p1' }), []).tarea.proyecto_id).toBeNull()
+  })
+
+  it('al editar, el interruptor solo viaja si se tocó', () => {
+    const b = borradorDe(deProyecto)
+    expect(cuerpoEdicion(b, deProyecto)).toBeNull()
+    expect(cuerpoEdicion({ ...b, mostrar_en_matriz: true }, deProyecto)).toEqual({
+      cambios: { mostrar_en_matriz: true },
+    })
+    expect(cuerpoEdicion({ ...b, proyecto_id: '' }, deProyecto)).toEqual({
+      cambios: { proyecto_id: null },
+    })
+  })
+})

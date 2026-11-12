@@ -38,6 +38,10 @@ export interface Borrador {
   categoria_id: string
   /** Pedido (OT) con el que se relaciona una tarea interna ('' = ninguno). */
   pedido_id: string
+  /** Proyecto interno al que pertenece ('' = ninguno). */
+  proyecto_id: string
+  /** Solo para tareas de proyecto: el interruptor "Mostrar en la matriz". */
+  mostrar_en_matriz: boolean
   descripcion: string
 }
 
@@ -63,6 +67,8 @@ export function borradorVacio(): Borrador {
     saldo_medio: null,
     categoria_id: '',
     pedido_id: '',
+    proyecto_id: '',
+    mostrar_en_matriz: true,
     descripcion: '',
   }
 }
@@ -96,6 +102,8 @@ export function borradorDe(d: DetalleTarea): Borrador {
     saldo_medio: t.saldo_medio,
     categoria_id: t.categoria_id ?? '',
     pedido_id: t.pedido_id ?? '',
+    proyecto_id: t.proyecto_id ?? '',
+    mostrar_en_matriz: t.mostrar_en_matriz,
     descripcion: t.descripcion ?? '',
   }
 }
@@ -162,6 +170,7 @@ function camposTarea(b: Borrador) {
     descripcion: b.descripcion.trim() || null,
     categoria_id: b.categoria_id || null,
     pedido_id: b.tipo === 'interna' ? b.pedido_id || null : null,
+    proyecto_id: b.tipo === 'interna' ? b.proyecto_id || null : null,
     sena: pedido ? (leerImporte(b.sena) ?? 0) : 0,
     saldo: pedido ? (leerImporte(b.saldo) ?? 0) : 0,
     sena_medio: pedido ? b.sena_medio : null,
@@ -235,6 +244,8 @@ export function tareaProvisoria(
       : null,
     responsables: personas.filter((p) => ids.has(p.id)),
     subtareas: { total: conTitulo.length, hechas: 0 },
+    // De un proyecto, aparece sola si tiene entrega (decisión 11).
+    mostrar_en_matriz: !c.proyecto_id || c.fecha_entrega !== null || c.estado === 'en_proceso',
   }
 }
 
@@ -245,6 +256,10 @@ export function cuerpoEdicion(b: Borrador, original: DetalleTarea) {
   const cambios: Record<string, unknown> = {}
   for (const k of Object.keys(despues) as (keyof typeof despues)[]) {
     if (JSON.stringify(antes[k]) !== JSON.stringify(despues[k])) cambios[k] = despues[k]
+  }
+  // El interruptor de la matriz solo viaja si se tocó (si no, decide la regla automática).
+  if (b.proyecto_id && b.mostrar_en_matriz !== original.tarea.mostrar_en_matriz) {
+    cambios.mostrar_en_matriz = b.mostrar_en_matriz
   }
   // El servidor exige el motivo cuando se pasa a "en espera".
   if ('motivo_espera' in cambios || 'estado' in cambios) {

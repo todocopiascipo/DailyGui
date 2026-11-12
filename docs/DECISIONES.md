@@ -39,6 +39,11 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-11 | App publicada con Supabase | Pedido del usuario: la app se publica en GitHub Pages (https://todocopiascipo.github.io/DailyGui/) y usa Supabase (`todocopias-operaciones`) como base real, para usarla desde el trabajo, el iPad y el monitor sin la PC de casa. El servidor local queda para desarrollo y pruebas, con la misma API. |
 | 2026-11-11 | Sin pantalla de ingreso | Pedido del usuario: por ahora no hay cuenta compartida (sección 4.3); se usa solo "¿Quién soy?". La base arrancó vacía. |
 | 2026-11-11 | Acceso por link secreto | Elegido por el usuario: como la dirección es pública, cada dispositivo se habilita abriendo una vez un link con una clave (`#acceso=…`). La base guarda solo el hash y rechaza todo pedido sin una clave activa. Se puede cambiar la clave cuando haga falta. |
+| 2026-11-12 | Proyectos: cuándo aparecen en la matriz (decisión 11) | Elegido por el usuario: "automático + interruptor". Una tarea de proyecto aparece sola en la matriz cuando le ponen fecha de entrega o pasa a "en proceso"; cada tarea tiene "Mostrar en la matriz" (en su detalle y en la vista del proyecto) y lo que se elige a mano manda. Las tareas sin proyecto se ven siempre. |
+| 2026-11-12 | Proyectos: acceso (decisión 11) | Elegido por el usuario: botón "Proyectos" abajo, junto a "¿Quién soy?". Abre una vista aparte: lista (en curso; terminados y cancelados plegados) con estado, responsable, fecha objetivo y avance; dentro, datos del proyecto, sus tareas (nueva, abrir, terminar, subir/bajar, mostrar en la matriz) e historial. |
+| 2026-11-12 | Proyectos: tareas con el "+" (decisión 11) | Elegido por el usuario: el "+" tiene "Proyecto" (opcional) en "Más datos". Desde un proyecto, "Nueva tarea" abre el mismo formulario con el proyecto ya elegido. El detalle de una tarea interna también deja cambiar el proyecto. En el globo se ve el nombre del proyecto. |
+| 2026-11-12 | Borrar un proyecto | Solo si no tiene tareas; si tiene, se pasa a "Terminado" o "Cancelado" (no se pierde nada). |
+| 2026-11-12 | Botones de abajo en el iPad | Con "Mis tareas" y "Proyectos" la fila de abajo a la izquierda llegaba al "+": en pantallas de menos de 1280 px esos dos botones quedan solo con su icono. |
 
 ## Consecuencias del prototipo local
 

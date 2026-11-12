@@ -1,0 +1,138 @@
+/* ---------- Proyectos internos (Fase 8) ---------- */
+.co-bloque {
+  display: block;
+}
+.co-proyecto-nuevo {
+  display: flex;
+  gap: var(--co-space-2);
+}
+.co-proyecto-nuevo > input {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 479px) {
+  .co-proyecto-nuevo {
+    flex-direction: column;
+  }
+}
+.co-proyectos,
+.co-tareas-proyecto {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-proyecto {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 40px 10px 14px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.06);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.co-proyecto:hover,
+.co-proyecto:focus-visible {
+  background: rgb(255 255 255 / 0.12);
+}
+.co-proyecto__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.co-proyecto__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.875rem;
+}
+.co-proyecto__flecha {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  opacity: 0.7;
+}
+.co-chip-estado {
+  padding: 1px 10px;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.co-chip-estado[data-estado='en_pausa'] {
+  border-style: dashed;
+}
+.co-chip-estado[data-estado='terminado'],
+.co-chip-estado[data-estado='cancelado'] {
+  opacity: 0.7;
+}
+.co-avance {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+}
+.co-avance__barra {
+  flex: 0 1 220px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.15);
+}
+.co-avance__barra > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--co-blanco);
+}
+.co-tarea-proyecto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 6px 10px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.05);
+}
+.co-tarea-proyecto[data-hecha] {
+  opacity: 0.7;
+}
+.co-tarea-proyecto[data-hecha] strong {
+  text-decoration: line-through;
+}
+.co-tarea-proyecto__titulo {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.co-tarea-proyecto__acciones {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.co-tarea-proyecto__acciones [aria-pressed='false'] {
+  opacity: 0.45;
+}
+.co-tarea-proyecto__acciones [aria-pressed='true'] {
+  background: rgb(255 255 255 / 0.16);
+}

@@ -29,6 +29,7 @@ import { Dialogo } from './Dialogo'
 import { describirEvento, momentoEvento, NOMBRES_ESTADO, NOMBRES_MOTIVO } from './historial'
 import { SelectorCategoria } from './SelectorCategoria'
 import { SelectorPedido } from './SelectorPedido'
+import { SelectorProyecto } from './SelectorProyecto'
 import { Subtareas } from './Subtareas'
 import type { DetalleTarea as Detalle } from './tipos'
 
@@ -411,6 +412,27 @@ function Editor({
               >
                 <Link2 size={14} aria-hidden /> Abrir el pedido "{detalle.pedido.titulo}"
               </button>
+            )}
+            <SelectorProyecto
+              valor={b.proyecto_id}
+              onCambiar={(v) => cambiar('proyecto_id', v)}
+              actual={detalle.proyecto}
+            />
+            {b.proyecto_id && (
+              <label className="co-interruptor">
+                <input
+                  type="checkbox"
+                  className="co-casilla"
+                  checked={b.mostrar_en_matriz}
+                  onChange={(e) => cambiar('mostrar_en_matriz', e.target.checked)}
+                />
+                <span>
+                  Mostrar en la matriz
+                  <span className="co-texto-suave co-bloque">
+                    Se prende sola cuando tiene fecha de entrega o está en proceso.
+                  </span>
+                </span>
+              </label>
             )}
           </div>
         )}

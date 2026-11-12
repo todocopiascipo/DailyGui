@@ -22,6 +22,7 @@ import { useCatalogos } from './datos'
 import { Dialogo } from './Dialogo'
 import { SelectorCategoria } from './SelectorCategoria'
 import { SelectorPedido } from './SelectorPedido'
+import { SelectorProyecto } from './SelectorProyecto'
 
 /** Lo cargado en el formulario (para reabrirlo si el servidor rechaza el alta). */
 export interface EstadoCreacion {
@@ -44,25 +45,33 @@ interface Props {
   /** Al reabrir después de un rechazo: lo que se había cargado y el motivo. */
   inicial?: EstadoCreacion
   error?: string
+  /** Creada desde un proyecto: ya viene con ese proyecto elegido. */
+  proyectoId?: string
 }
 
 /** Tarea nueva desde "+": siempre interna (los pedidos se cargan con la OT). */
-const tareaVacia = (): Borrador => ({ ...borradorVacio(), tipo: 'interna' })
+const tareaVacia = (proyectoId = ''): Borrador => ({
+  ...borradorVacio(),
+  tipo: 'interna',
+  proyecto_id: proyectoId,
+})
 
 /**
  * Tarea interna ("+", especificación 7.5): lo esencial en un paso (título,
  * responsables, entrega, importante y urgente), su categoría y, si es para
  * un pedido, la orden de trabajo ya cargada. El resto, en "Más datos".
  */
-export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: Props) {
+export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, proyectoId }: Props) {
   const idForm = useId()
   const catalogos = useCatalogos()
   const umbrales = useMatriz().data?.config.umbrales
   const conectado = useConectado()
-  const [vacia] = useState(tareaVacia)
+  const [vacia] = useState(() => tareaVacia(proyectoId))
   const [b, setB] = useState<Borrador>(() => inicial?.b ?? vacia)
   const [subtareas, setSubtareas] = useState<SubtareaNueva[]>(() => inicial?.subtareas ?? [])
-  const [mas, setMas] = useState(() => (inicial?.subtareas.length ?? 0) > 0)
+  const [mas, setMas] = useState(
+    () => (inicial?.subtareas.length ?? 0) > 0 || Boolean(inicial?.b.proyecto_id || proyectoId),
+  )
   const [errores, setErrores] = useState<Errores>({})
 
   const cambiar = <K extends keyof Borrador>(k: K, v: Borrador[K]) => {
@@ -184,6 +193,8 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: P
 
         {mas && (
           <div className="co-formulario co-formulario--anidado">
+            <SelectorProyecto valor={b.proyecto_id} onCambiar={(v) => cambiar('proyecto_id', v)} />
+
             <Campo etiqueta="Descripción">
               {({ id }) => (
                 <textarea

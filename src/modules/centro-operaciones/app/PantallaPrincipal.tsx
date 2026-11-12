@@ -36,6 +36,7 @@ import { movimiento } from '../lib/urgencia'
 // Configuración se usa poco: se carga recién cuando se abre.
 const Configuracion = lazy(() => import('../features/configuracion/Configuracion'))
 const MisTareas = lazy(() => import('../features/mis-tareas/MisTareas'))
+const Proyectos = lazy(() => import('../features/proyectos/Proyectos'))
 
 /** No interceptar atajos mientras se escribe. */
 function escribiendo(destino: EventTarget | null): boolean {
@@ -48,6 +49,8 @@ interface Creacion {
   formulario: 'rapida' | 'ot'
   inicial?: EstadoCreacion
   error?: string
+  /** Tarea nueva dentro de un proyecto. */
+  proyectoId?: string
 }
 
 /** Aviso breve abajo; puede traer una acción ("Copiar mensaje"). */
@@ -95,6 +98,7 @@ export function PantallaPrincipal() {
   const [porConfirmar, setPorConfirmar] = useState<PorConfirmar | null>(null)
   const [configurando, setConfigurando] = useState(false)
   const [viendoMisTareas, setViendoMisTareas] = useState(false)
+  const [viendoProyectos, setViendoProyectos] = useState(false)
   const catalogos = useCatalogos()
   const quien = usePersonaActiva(catalogos.data?.personas)
   /** "¿Quién soy?" abierto; si vino de una acción, se sigue con ella al elegir. */
@@ -107,7 +111,8 @@ export function PantallaPrincipal() {
     porConfirmar !== null ||
     configurando ||
     eligiendo !== null ||
-    viendoMisTareas
+    viendoMisTareas ||
+    viendoProyectos
 
   /**
    * Crear, terminar, entregar y eliminar quedan a nombre de alguien
@@ -117,8 +122,10 @@ export function PantallaPrincipal() {
     if (quien.identificado) accion()
     else setEligiendo({ motivo, despues: accion })
   }
-  const abrirAlta = (formulario: Creacion['formulario']) =>
-    conPersona('Para crear una tarea, elegí quién sos.', () => setCreando({ formulario }))
+  const abrirAlta = (formulario: Creacion['formulario'], proyectoId?: string) =>
+    conPersona('Para crear una tarea, elegí quién sos.', () =>
+      setCreando({ formulario, proyectoId }),
+    )
 
   // Los avisos se van solos.
   useEffect(() => {
@@ -134,6 +141,7 @@ export function PantallaPrincipal() {
     crear.mutateAsync(alta).catch((e: unknown) =>
       setCreando({
         formulario: estado.formulario ?? 'rapida',
+        proyectoId: estado.b.proyecto_id || undefined,
         inicial: estado,
         error: mensaje(e),
       }),
@@ -142,7 +150,9 @@ export function PantallaPrincipal() {
 
   const tareas = useMemo(() => {
     const reales = matriz.data?.tareas ?? []
-    const nuevas = provisorias.filter((p) => !reales.some((t) => t.id === p.id))
+    const nuevas = provisorias.filter(
+      (p) => p.mostrar_en_matriz !== false && !reales.some((t) => t.id === p.id),
+    )
     return aplicarEnCurso(nuevas.length > 0 ? [...reales, ...nuevas] : reales)
   }, [matriz.data, provisorias, aplicarEnCurso])
 
@@ -319,6 +329,7 @@ export function PantallaPrincipal() {
     error: creando?.error,
     onGuardar: guardarNueva,
     onCerrar: () => setCreando(null),
+    proyectoId: creando?.proyectoId,
   }
   const confirmacion = porConfirmar ? CONFIRMACIONES[porConfirmar.accion] : null
 
@@ -347,6 +358,7 @@ export function PantallaPrincipal() {
               onElegir={() => setEligiendo({})}
               onResaltar={() => quien.setResaltar(!quien.resaltar)}
               onMisTareas={() => setViendoMisTareas(true)}
+              onProyectos={() => setViendoProyectos(true)}
             />
             <IndicadorConexion estado={conexion} />
             {aviso && (
@@ -370,6 +382,28 @@ export function PantallaPrincipal() {
             )}
           </div>
 
+          {/* Vistas grandes primero: lo que se abre desde ellas (detalle, alta,
+              ¿Quién soy?) queda por encima. */}
+          {viendoMisTareas && quien.persona && (
+            <Suspense fallback={null}>
+              <MisTareas
+                persona={quien.persona}
+                ahora={ahora}
+                onAbrir={setAbierta}
+                onCerrar={() => setViendoMisTareas(false)}
+              />
+            </Suspense>
+          )}
+          {viendoProyectos && (
+            <Suspense fallback={null}>
+              <Proyectos
+                ahora={ahora}
+                onAbrirTarea={setAbierta}
+                onCrearTarea={(id) => abrirAlta('rapida', id)}
+                onCerrar={() => setViendoProyectos(false)}
+              />
+            </Suspense>
+          )}
           {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
           {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
           {abierta && (
@@ -406,16 +440,6 @@ export function PantallaPrincipal() {
                 if (p && despues) despues()
               }}
             />
-          )}
-          {viendoMisTareas && quien.persona && (
-            <Suspense fallback={null}>
-              <MisTareas
-                persona={quien.persona}
-                ahora={ahora}
-                onAbrir={setAbierta}
-                onCerrar={() => setViendoMisTareas(false)}
-              />
-            </Suspense>
           )}
           {configurando && (
             <Suspense fallback={null}>
