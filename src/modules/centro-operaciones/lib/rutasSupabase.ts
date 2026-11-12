@@ -87,7 +87,7 @@ export function errorSupabase(error: { code?: string; message?: string }): {
   // Identificador mal formado en la ruta: para la app, "no existe".
   if (codigo === '22P02') return { estado: 404, mensaje: 'No encontrado' }
   if (codigo === '42501') {
-    return { estado: 403, mensaje: 'La app todavía no tiene el acceso habilitado' }
+    return { estado: 403, mensaje: 'Sin acceso: abrí el link de acceso del local' }
   }
   if (codigo === 'P0001') return { estado: 400, mensaje: error.message ?? 'Datos inválidos' }
   return { estado: 500, mensaje: 'Error del servidor' }

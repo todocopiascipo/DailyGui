@@ -33,18 +33,20 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-10 | "Mis tareas" | Ahora / Sigue (entrega más cercana), línea del día (lo de hoy y lo vencido, de la hora de inicio a la de entrega) y paso a paso con checklist: todos los pasos de cada tarea, con quién hace cada uno ("Vos" en los propios). Sin pasos pendientes, ofrece Terminar. |
 | 2026-11-10 | Urgente al crear | Pedido del usuario: "+" y la OT tienen "Urgente: Sí / No / Por fecha" junto a "Importante". "Por fecha" (por defecto) deja la urgencia automática según la entrega; Sí y No la fijan con la misma regla que al arrastrar (sí → al menos 3; no → como mucho 2). En el detalle sigue el slider de 1 a 5. |
 | 2026-11-10 | "+" = tareas internas | Pedido del usuario: el "+" crea siempre tareas internas, con un formulario simple (título, responsables, entrega, importante, urgente, categoría interna y "Pedido relacionado"); descripción, hora de inicio y subtareas en "Más datos". Los pedidos se cargan con la OT. |
-| 2026-11-10 | Pedido relacionado | Una tarea interna puede enlazarse a una OT ya cargada (campo `pedido_id`, migración local `0003`; la de Supabase queda escrita sin aplicar). Se ve en el globo (icono de enlace y nombre del pedido) y en el detalle, con un botón para abrir el pedido. Solo internas y solo hacia pedidos. |
+| 2026-11-10 | Pedido relacionado | Una tarea interna puede enlazarse a una OT ya cargada (campo `pedido_id`, migración local `0003` y su equivalente en Supabase). Se ve en el globo (icono de enlace y nombre del pedido) y en el detalle, con un botón para abrir el pedido. Solo internas y solo hacia pedidos. |
 | 2026-11-10 | Orden de la OT | Pedido del usuario: las fechas de inicio y límite van al final, después de Nombre. |
 | 2026-11-11 | Repositorio en GitHub | Pedido del usuario (reemplaza "git local, sin remoto"): el código está en https://github.com/todocopiascipo/DailyGui (público) y se sube a `main` al terminar cada fase. No se suben claves ni datos (`.env.local`, `datos/`). |
+| 2026-11-11 | App publicada con Supabase | Pedido del usuario: la app se publica en GitHub Pages (https://todocopiascipo.github.io/DailyGui/) y usa Supabase (`todocopias-operaciones`) como base real, para usarla desde el trabajo, el iPad y el monitor sin la PC de casa. El servidor local queda para desarrollo y pruebas, con la misma API. |
+| 2026-11-11 | Sin pantalla de ingreso | Pedido del usuario: por ahora no hay cuenta compartida (sección 4.3); se usa solo "¿Quién soy?". La base arrancó vacía. |
+| 2026-11-11 | Acceso por link secreto | Elegido por el usuario: como la dirección es pública, cada dispositivo se habilita abriendo una vez un link con una clave (`#acceso=…`). La base guarda solo el hash y rechaza todo pedido sin una clave activa. Se puede cambiar la clave cuando haga falta. |
 
 ## Consecuencias del prototipo local
 
-- **Acceso:** mientras sea local, no hay pantalla de ingreso: la app solo es
-  accesible dentro de la red del local. La cuenta compartida (sección 4.3) se
-  implementa al migrar a Supabase.
+- **Acceso:** sin pantalla de ingreso; en la app publicada, por link secreto
+  (ver arriba). La cuenta compartida (sección 4.3) queda para más adelante.
 - **Migración:** la interfaz accede a los datos solo a través de
   `src/modules/centro-operaciones/lib/api.ts`. Las reglas automáticas e
   historial están en `server/reglas.ts` y `server/servicio.ts`, equivalentes a
   los triggers de `supabase/migrations/`.
-- **Tiempo real (Fase 4):** se hará entre el servidor local y los dispositivos
-  (no con Supabase Realtime).
+- **Tiempo real:** en desarrollo, Server-Sent Events del servidor local; en la
+  app publicada, avisos de Supabase Realtime (canal `co-cambios`, sin datos).

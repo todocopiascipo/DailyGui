@@ -305,7 +305,7 @@ export function PantallaPrincipal() {
     return (
       <p role="alert" className="co-mensaje-central">
         {matriz.error instanceof ErrorApi && matriz.error.estado === 403
-          ? 'La app todavía no tiene el acceso habilitado.'
+          ? 'Para usar la app en este dispositivo, abrí el link de acceso del local.'
           : usaSupabase
             ? 'No se pudo conectar. Revisá la conexión a internet.'
             : 'No se pudo conectar con el servidor del local. Revisá que esté encendido.'}

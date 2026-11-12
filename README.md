@@ -106,10 +106,23 @@ integrarse más adelante como módulo de la suite todo-herramientas:
 - `src/main.tsx` y `src/standalone.css` son solo para correr la app suelta.
 - `server/`: servidor local de datos (prototipo).
 
-## Más adelante: Supabase
+## App publicada (Supabase + GitHub Pages)
 
-Proyecto creado y sin uso: `todocopias-operaciones` (`sa-east-1`). Su esquema,
-con RLS y triggers equivalentes a las reglas locales, está en
-`supabase/migrations/` y `supabase/seed.sql`. `npm run verificar:acceso`
-comprueba que sin sesión no se puede leer nada (usa `VITE_SUPABASE_URL` y
-`VITE_SUPABASE_PUBLISHABLE_KEY` de `.env.local`).
+- Dirección: https://todocopiascipo.github.io/DailyGui/ . Cada push a `main`
+  corre las pruebas y, si pasan, publica (`.github/workflows/publicar.yml`).
+- Datos en Supabase (`todocopias-operaciones`, `sa-east-1`). La app llama a
+  funciones `public.co_*` equivalentes a cada ruta del servidor local
+  (`lib/rutasSupabase.ts`); el tiempo real llega por el canal `co-cambios`.
+  Esquema y funciones en `supabase/migrations/`.
+- **Acceso por link secreto** (sin pantalla de ingreso): cada dispositivo abre
+  una vez `https://todocopiascipo.github.io/DailyGui/#acceso=CLAVE`; la clave
+  queda guardada en ese navegador y desaparece de la barra de direcciones.
+  La base guarda solo su hash (`privado.claves_acceso`). Sin la clave no se
+  puede leer ni escribir nada. La clave nunca va al repositorio.
+- **Cambiar la clave** (por ejemplo, si el link se compartió de más): generar
+  una nueva, agregar su hash sha256 a `privado.claves_acceso` y poner
+  `activa = false` en la anterior. Cada dispositivo vuelve a abrir el link nuevo.
+- La clave "publicable" de Supabase del workflow está hecha para ir en el
+  navegador; la `service_role` nunca se usa en la app.
+- `npm run verificar:acceso` comprueba que sin la clave no se puede leer nada
+  (usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` de `.env.local`).

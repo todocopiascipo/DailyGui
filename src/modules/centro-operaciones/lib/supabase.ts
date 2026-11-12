@@ -7,6 +7,7 @@
  * Los datos los protege la base (cada función controla el acceso).
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { claveDeAcceso } from './acceso'
 
 export const usaSupabase = import.meta.env.VITE_CO_BACKEND === 'supabase'
 
@@ -29,6 +30,8 @@ export function supabase(): SupabaseClient {
       fetch: (entrada, init = {}) => {
         const headers = new Headers(init.headers)
         if (personaActual) headers.set('x-persona-id', personaActual)
+        const clave = claveDeAcceso()
+        if (clave) headers.set('x-co-acceso', clave)
         return fetch(entrada, { ...init, headers })
       },
     },
