@@ -48,4 +48,6 @@ export interface ConfigMatriz {
   confeti: boolean
   /** Plantilla de "Copiar mensaje", con {nombre}, {trabajo} y {saldo}. */
   plantilla: string
+  /** Días que una tarea queda en la papelera (configuracion.papelera_dias). */
+  papeleraDias: number
 }

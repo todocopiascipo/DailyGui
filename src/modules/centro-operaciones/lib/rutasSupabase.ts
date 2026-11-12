@@ -36,6 +36,17 @@ export function rutaARpc(
     if (a === 'clientes')
       return rpc('co_clientes', { p_telefono: url.searchParams.get('telefono') ?? '' })
     if (a === 'hechas') return rpc('co_hechas', { p_desde: url.searchParams.get('desde') })
+    if (a === 'personas') return rpc('co_personas')
+    if (a === 'categorias') return rpc('co_categorias')
+    if (a === 'respaldo') return rpc('co_respaldo')
+    if (a === 'historial') {
+      const filtros: Record<string, string> = {}
+      for (const k of ['persona', 'tarea', 'desde', 'hasta', 'texto', 'antes']) {
+        const v = url.searchParams.get(k)
+        if (v) filtros[k] = v
+      }
+      return rpc('co_historial', { p: filtros })
+    }
   }
 
   if (a === 'personas') {
@@ -46,6 +57,20 @@ export function rutaARpc(
     if (m === 'PUT' && b === 'pin' && !c)
       return rpc('co_cambiar_pin', { p_id: id, p: cuerpo ?? {} })
     if (m === 'GET' && b === 'tareas' && !c) return rpc('co_mis_tareas', { p_persona: id })
+    if (m === 'PUT' && id === 'orden' && !b) return rpc('co_ordenar_personas', { p: cuerpo ?? {} })
+    if (m === 'PATCH' && partes.length === 2) {
+      return rpc('co_editar_persona', { p_id: id, p: cuerpo ?? {} })
+    }
+  }
+
+  if (a === 'categorias') {
+    if (m === 'POST' && partes.length === 1) return rpc('co_crear_categoria', { p: cuerpo ?? {} })
+    if (m === 'PUT' && id === 'orden' && !b) {
+      return rpc('co_ordenar_categorias', { p: cuerpo ?? {} })
+    }
+    if (m === 'PATCH' && partes.length === 2) {
+      return rpc('co_editar_categoria', { p_id: id, p: cuerpo ?? {} })
+    }
   }
 
   if (a === 'tareas') {

@@ -1,4 +1,16 @@
-import { FileText, Plus, Settings, Trash2, WifiOff } from 'lucide-react'
+import {
+  CheckCheck,
+  FileText,
+  FolderOpen,
+  History,
+  ListTodo,
+  Plus,
+  Settings,
+  Trash2,
+  UserRound,
+  WifiOff,
+} from 'lucide-react'
+import { BordeHerramientas, type Herramienta } from '../features/bordes/BordeHerramientas'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PanelHechas } from '../features/hechas/PanelHechas'
 import {
@@ -37,6 +49,7 @@ import { movimiento } from '../lib/urgencia'
 const Configuracion = lazy(() => import('../features/configuracion/Configuracion'))
 const MisTareas = lazy(() => import('../features/mis-tareas/MisTareas'))
 const Proyectos = lazy(() => import('../features/proyectos/Proyectos'))
+const Historial = lazy(() => import('../features/historial/Historial'))
 
 /** No interceptar atajos mientras se escribe. */
 function escribiendo(destino: EventTarget | null): boolean {
@@ -99,6 +112,8 @@ export function PantallaPrincipal() {
   const [configurando, setConfigurando] = useState(false)
   const [viendoMisTareas, setViendoMisTareas] = useState(false)
   const [viendoProyectos, setViendoProyectos] = useState(false)
+  const [viendoHistorial, setViendoHistorial] = useState(false)
+  const [senalHechas, setSenalHechas] = useState(0)
   const catalogos = useCatalogos()
   const quien = usePersonaActiva(catalogos.data?.personas)
   /** "¿Quién soy?" abierto; si vino de una acción, se sigue con ella al elegir. */
@@ -112,7 +127,8 @@ export function PantallaPrincipal() {
     configurando ||
     eligiendo !== null ||
     viendoMisTareas ||
-    viendoProyectos
+    viendoProyectos ||
+    viendoHistorial
 
   /**
    * Crear, terminar, entregar y eliminar quedan a nombre de alguien
@@ -331,7 +347,61 @@ export function PantallaPrincipal() {
     onCerrar: () => setCreando(null),
     proyectoId: creando?.proyectoId,
   }
-  const confirmacion = porConfirmar ? CONFIRMACIONES[porConfirmar.accion] : null
+  // Menú del borde (especificación 7.10): todo a mano, en un solo lugar.
+  const herramientas: Herramienta[] = [
+    {
+      id: 'crear',
+      texto: 'Crear tarea',
+      icono: Plus,
+      atajo: 'N',
+      hacer: () => abrirAlta('rapida'),
+    },
+    {
+      id: 'ot',
+      texto: 'Orden de trabajo',
+      icono: FileText,
+      atajo: 'O',
+      hacer: () => abrirAlta('ot'),
+    },
+    { id: 'quien', texto: '¿Quién soy?', icono: UserRound, hacer: () => setEligiendo({}) },
+    ...(quien.persona
+      ? [
+          {
+            id: 'mis',
+            texto: 'Mis tareas',
+            icono: ListTodo,
+            hacer: () => setViendoMisTareas(true),
+          },
+        ]
+      : []),
+    {
+      id: 'proyectos',
+      texto: 'Proyectos',
+      icono: FolderOpen,
+      hacer: () => setViendoProyectos(true),
+    },
+    {
+      id: 'hechas',
+      texto: 'Hechas hoy',
+      icono: CheckCheck,
+      hacer: () => setSenalHechas((n) => n + 1),
+    },
+    { id: 'historial', texto: 'Historial', icono: History, hacer: () => setViendoHistorial(true) },
+    {
+      id: 'configuracion',
+      texto: 'Configuración',
+      icono: Settings,
+      hacer: () => setConfigurando(true),
+    },
+  ]
+  const confirmacion = porConfirmar
+    ? porConfirmar.accion === 'eliminar'
+      ? {
+          ...CONFIRMACIONES.eliminar,
+          texto: `Podrás recuperarla desde Configuración › Papelera durante ${matriz.data.config.papeleraDias} días.`,
+        }
+      : CONFIRMACIONES[porConfirmar.accion]
+    : null
 
   return (
     <ContextoConexion.Provider value={conexion}>
@@ -350,7 +420,13 @@ export function PantallaPrincipal() {
                 onCrearOT={() => abrirAlta('ot')}
                 onConfigurar={() => setConfigurando(true)}
               />
-              <PanelHechas hechas={hechas.data} ejecutar={ejecutar} onAbrir={setAbierta} />
+              <PanelHechas
+                hechas={hechas.data}
+                ejecutar={ejecutar}
+                onAbrir={setAbierta}
+                abrirSenal={senalHechas}
+              />
+              <BordeHerramientas herramientas={herramientas} bloqueado={hayVentana} />
             </ProveedorArrastre>
             <ControlesPersona
               persona={quien.persona}
@@ -440,6 +516,15 @@ export function PantallaPrincipal() {
                 if (p && despues) despues()
               }}
             />
+          )}
+          {viendoHistorial && (
+            <Suspense fallback={null}>
+              <Historial
+                ahora={ahora}
+                onAbrirTarea={setAbierta}
+                onCerrar={() => setViendoHistorial(false)}
+              />
+            </Suspense>
           )}
           {configurando && (
             <Suspense fallback={null}>

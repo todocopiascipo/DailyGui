@@ -44,6 +44,26 @@ export function Dialogo({
     return () => anterior?.focus?.()
   }, [])
 
+  // Si el foco se perdió (por ej., se deshabilitó el botón tocado o se recargó
+  // una lista), Esc igual cierra la ventana de más arriba.
+  const alEscapar = useRef<() => void>(() => {})
+  useEffect(() => {
+    alEscapar.current = () => (confirmando ? setConfirmando(false) : pedirCierre())
+  })
+  useEffect(() => {
+    const alTeclearAfuera = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const activo = document.activeElement
+      if (activo && activo !== document.body) return
+      const ventanas = document.querySelectorAll('[role="dialog"]')
+      if (ventanas[ventanas.length - 1] !== caja.current) return
+      e.preventDefault()
+      alEscapar.current()
+    }
+    window.addEventListener('keydown', alTeclearAfuera)
+    return () => window.removeEventListener('keydown', alTeclearAfuera)
+  }, [])
+
   const alTeclear = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.stopPropagation()

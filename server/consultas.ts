@@ -52,7 +52,7 @@ export function cargarMatriz(db: BaseDeDatos): RespuestaMatriz {
       .prepare(
         `SELECT clave, valor FROM configuracion
          WHERE clave IN ('umbrales_urgencia', 'disposicion_cuadrantes', 'confeti_activado',
-                         'plantilla_mensaje')`,
+                         'plantilla_mensaje', 'papelera_dias')`,
       )
       .all() as { clave: string; valor: string }[]
   ).map((c) => ({ clave: c.clave, valor: JSON.parse(c.valor) as unknown }))

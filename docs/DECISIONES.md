@@ -44,6 +44,11 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-12 | Proyectos: tareas con el "+" (decisión 11) | Elegido por el usuario: el "+" tiene "Proyecto" (opcional) en "Más datos". Desde un proyecto, "Nueva tarea" abre el mismo formulario con el proyecto ya elegido. El detalle de una tarea interna también deja cambiar el proyecto. En el globo se ve el nombre del proyecto. |
 | 2026-11-12 | Borrar un proyecto | Solo si no tiene tareas; si tiene, se pasa a "Terminado" o "Cancelado" (no se pierde nada). |
 | 2026-11-12 | Botones de abajo en el iPad | Con "Mis tareas" y "Proyectos" la fila de abajo a la izquierda llegaba al "+": en pantallas de menos de 1280 px esos dos botones quedan solo con su icono. |
+| 2026-11-12 | Menú del borde (7.10) | Borde izquierdo: aparece al acercar el mouse, con la pestaña casi transparente del borde (táctil y teclado) o deslizando desde el borde. Tiene todo: Crear tarea, Orden de trabajo, ¿Quién soy?, Mis tareas, Proyectos, Hechas hoy, Historial y Configuración. Los botones de abajo ("+", OT, ¿Quién soy?, etc.) se mantienen como estaban: ya habían sido aprobados y no se quitan. |
+| 2026-11-12 | Historial global (7.11) | Ventana aparte con búsqueda por texto (título, persona, proyecto o datos del cambio), filtro por persona, por fechas (días del local, "hasta" incluido) y por tarea (tocando su nombre). De a 50, con "Ver más". |
+| 2026-11-12 | Configuración completa (7.12) | Personas (agregar, renombrar, dar de baja/reactivar, ordenar; el PIN lo pone cada uno desde "¿Quién soy?"), categorías (agregar, renombrar, para qué es, activar/desactivar, ordenar), umbrales de urgencia y disposición de cuadrantes, confeti y mensaje, papelera (con días configurables, 1 a 365) y Exportar respaldo. Las notificaciones por dispositivo llegan en la Fase 10. |
+| 2026-11-12 | Respaldo | Un archivo JSON con todas las tablas (personas, clientes, categorías, proyectos, tareas, responsables, subtareas, historial y configuración). Los PIN no se incluyen. |
+| 2026-11-12 | Esc con el foco perdido | Si el foco se pierde (por ej., al guardar se apaga el botón), Esc igual cierra la ventana de más arriba. |
 
 ## Consecuencias del prototipo local
 

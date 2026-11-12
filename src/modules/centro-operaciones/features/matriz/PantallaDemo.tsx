@@ -19,6 +19,7 @@ export default function PantallaDemo() {
           disposicion: DISPOSICION_POR_DEFECTO,
           confeti: false,
           plantilla: PLANTILLA_POR_DEFECTO,
+          papeleraDias: 30,
         }}
         ahora={ahora}
       />

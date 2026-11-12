@@ -1,0 +1,193 @@
+/* ---------- Fase 9: menú del borde, historial y configuración ---------- */
+
+/* Zona invisible del borde izquierdo (solo mouse). */
+.co-borde-izquierdo {
+  position: absolute;
+  top: 80px;
+  bottom: 80px;
+  left: 0;
+  z-index: 20;
+  width: 12px;
+}
+@media (hover: none) {
+  .co-borde-izquierdo {
+    display: none;
+  }
+}
+/* Pestaña casi transparente (táctil y teclado), espejo de la de "Hechas hoy". */
+.co-pestana-herramientas {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 21;
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(255 255 255 / 0.7);
+  cursor: pointer;
+  transform: translateY(-50%);
+  opacity: 0.45;
+  transition: opacity 150ms ease;
+}
+.co-pestana-herramientas:hover,
+.co-pestana-herramientas:focus-visible,
+.co-pestana-herramientas[aria-expanded='true'] {
+  opacity: 1;
+}
+.co-herramientas {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 22;
+  padding: 10px 8px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-left: 0;
+  border-radius: 0 22px 22px 0;
+  background: rgb(22 34 92 / 0.94);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+  transform: translate(-105%, -50%);
+  visibility: hidden;
+  transition:
+    transform 180ms ease-out,
+    visibility 0s linear 180ms;
+}
+.co-herramientas[data-abierto] {
+  transform: translate(0, -50%);
+  visibility: visible;
+  transition: transform 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .co-herramientas,
+  .co-herramientas[data-abierto] {
+    transition: none;
+  }
+}
+.co-herramientas ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-herramienta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--co-blanco);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.co-herramienta:hover,
+.co-herramienta:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Historial */
+.co-filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--co-space-2);
+}
+@media (max-width: 719px) {
+  .co-filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.co-chip-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--co-blanco);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.co-historial--global li {
+  padding: 6px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+.co-historial--global .co-historial__cuando {
+  min-width: 82px;
+}
+.co-historial__que {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.co-enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Configuración: listas editables */
+.co-lista-config {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-lista-config__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.co-lista-config__item[data-inactiva] {
+  opacity: 0.6;
+}
+.co-lista-config__nombre {
+  flex: 1;
+}
+.co-entrada--fila {
+  flex: 1 1 180px;
+  width: auto;
+}
+select.co-entrada--fila {
+  flex: 0 1 170px;
+}
+.co-entrada--corta {
+  width: 110px;
+}
+.co-interruptor--chico {
+  gap: 8px;
+  min-height: 44px;
+}
+.co-fila--dos {
+  flex-wrap: wrap;
+}
+.co-fila--dos > * {
+  flex: 1 1 40%;
+}
+.co-fila--fin {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}

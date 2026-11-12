@@ -55,6 +55,15 @@ En la matriz:
   Una tarea de proyecto aparece en la matriz sola cuando tiene fecha de entrega
   o está en proceso; el botón de cuadrícula ("Mostrar en la matriz") lo cambia
   a mano. Con el "+", el proyecto se elige en "Más datos".
+- **Herramientas (borde izquierdo):** acercando el mouse al borde izquierdo,
+  con la pestaña casi transparente de ese borde o deslizando desde el borde
+  (iPad): crear tarea, OT, ¿Quién soy?, Mis tareas, Proyectos, Hechas hoy,
+  Historial y Configuración.
+- **Historial:** todo lo que pasó, quién y cuándo. Se busca por texto y se
+  filtra por persona, por fechas o por tarea (tocando su nombre).
+- **Configuración** (engranaje abajo a la derecha): personas, categorías,
+  urgencia y cuadrantes, confeti y mensaje, papelera (y cuántos días guarda) y
+  **Exportar respaldo** (descarga un archivo con todo, sin los PIN).
 - **Hechas hoy:** acercando el mouse al borde derecho (o la pestaña del borde
   en el iPad): lo terminado y lo entregado en el día, con "Devolver".
 - **Tiempo real:** lo que se guarda en un dispositivo aparece en los demás en
@@ -85,6 +94,10 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
   `GET /api/hechas?desde=`, `GET|POST /api/proyectos`,
   `GET|PATCH|DELETE /api/proyectos/:id`, `PUT /api/proyectos/:id/orden`,
+  `GET /api/personas`, `PATCH /api/personas/:id`, `PUT /api/personas/orden`,
+  `GET|POST /api/categorias`, `PATCH /api/categorias/:id`,
+  `PUT /api/categorias/orden`, `GET /api/historial?persona=&tarea=&desde=&hasta=&texto=&antes=`,
+  `GET /api/respaldo`,
   `PUT /api/configuracion/:clave` (confeti y
   plantilla), `DELETE /api/tareas/:id` (solo
   desde la papelera). Todo lo que llega se valida en

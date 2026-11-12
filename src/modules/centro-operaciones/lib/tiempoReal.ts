@@ -22,7 +22,7 @@ export function useConectado(): boolean {
 }
 
 interface Aviso {
-  recursos: ('tareas' | 'personas' | 'configuracion' | 'proyectos')[]
+  recursos: ('tareas' | 'personas' | 'configuracion' | 'proyectos' | 'catalogos')[]
   tarea_id?: string | null
 }
 
@@ -48,9 +48,15 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
   if (aviso.recursos.includes('configuracion')) {
     void qc.invalidateQueries({ queryKey: ['matriz'] })
   }
-  if (aviso.recursos.includes('personas')) {
+  if (aviso.recursos.includes('personas') || aviso.recursos.includes('catalogos')) {
     void qc.invalidateQueries({ queryKey: ['catalogos'] })
+    void qc.invalidateQueries({ queryKey: ['personas'] })
+    void qc.invalidateQueries({ queryKey: ['categorias'] })
+    // Los nombres aparecen en los globos.
+    void qc.invalidateQueries({ queryKey: ['matriz'] })
   }
+  // El historial cambia con casi todo.
+  void qc.invalidateQueries({ queryKey: ['historial'] })
 }
 
 /**

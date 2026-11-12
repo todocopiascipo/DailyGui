@@ -1,19 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState } from 'react'
-import { pedir } from '../../lib/api'
 import { armarMensaje, PLANTILLA_POR_DEFECTO } from '../../lib/mensaje'
 import { useConectado } from '../../lib/tiempoReal'
 import { useMatriz } from '../matriz/datos'
-
-/** Guarda un valor de configuración y actualiza la matriz (que la incluye). */
-function useGuardarConfiguracion() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ clave, valor }: { clave: string; valor: unknown }) =>
-      pedir(`/configuracion/${clave}`, { method: 'PUT', body: JSON.stringify({ valor }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matriz'] }),
-  })
-}
+import { useGuardarConfiguracion } from './datos'
 
 /**
  * Terminar y avisar (especificación 6.4 y 6.7): confeti al terminar y

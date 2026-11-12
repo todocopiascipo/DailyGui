@@ -20,12 +20,20 @@ export function PanelHechas({
   hechas,
   ejecutar,
   onAbrir,
+  abrirSenal = 0,
 }: {
   hechas: HechasHoy | undefined
   ejecutar: EjecutarAccion
   onAbrir: (id: string) => void
+  /** Cambia cada vez que otra parte pide abrirlo (el menú del borde). */
+  abrirSenal?: number
 }) {
   const [abierto, setAbierto] = useState(false)
+  const [senalVista, setSenalVista] = useState(abrirSenal)
+  if (abrirSenal !== senalVista) {
+    setSenalVista(abrirSenal)
+    setAbierto(true)
+  }
   /** Abierto con el mouse: se cierra solo al alejarse. */
   const porHover = useRef(false)
   const arrastre = useArrastre()

@@ -60,6 +60,7 @@ describe('API', () => {
     expect(r.configuracion.map((c) => c.clave).sort()).toEqual([
       'confeti_activado',
       'disposicion_cuadrantes',
+      'papelera_dias',
       'plantilla_mensaje',
       'umbrales_urgencia',
     ])
@@ -463,7 +464,142 @@ describe('API de edición', () => {
     expect(config.find((c) => c.clave === 'plantilla_mensaje')!.valor).toBe('Hola {nombre}')
     expect((await api('PUT', '/configuracion/confeti_activado', { valor: 'no' })).estado).toBe(400)
     expect((await api('PUT', '/configuracion/plantilla_mensaje', { valor: '' })).estado).toBe(400)
-    expect((await api('PUT', '/configuracion/papelera_dias', { valor: 1 })).estado).toBe(404)
+    expect((await api('PUT', '/configuracion/nada', { valor: 1 })).estado).toBe(404)
+  })
+
+  it('configuración completa: umbrales, disposición y días de papelera, validados', async () => {
+    const ok = [
+      ['umbrales_urgencia', { nivel_5_horas: 1, nivel_3_horas: 12, nivel_2_horas: 48 }],
+      [
+        'disposicion_cuadrantes',
+        {
+          arriba_izquierda: 'hacer',
+          arriba_derecha: 'planificar',
+          abajo_izquierda: 'delegar',
+          abajo_derecha: 'eliminar',
+        },
+      ],
+      ['papelera_dias', 15],
+    ] as const
+    for (const [clave, valor] of ok) {
+      expect((await api('PUT', `/configuracion/${clave}`, { valor })).estado).toBe(200)
+    }
+    const config = (await api('GET', '/matriz')).cuerpo.configuracion as {
+      clave: string
+      valor: unknown
+    }[]
+    expect(config.find((c) => c.clave === 'papelera_dias')!.valor).toBe(15)
+    const malos = [
+      ['umbrales_urgencia', { nivel_5_horas: 30, nivel_3_horas: 12, nivel_2_horas: 48 }],
+      ['umbrales_urgencia', { nivel_5_horas: -1, nivel_3_horas: 12, nivel_2_horas: 48 }],
+      [
+        'disposicion_cuadrantes',
+        {
+          arriba_izquierda: 'hacer',
+          arriba_derecha: 'hacer',
+          abajo_izquierda: 'delegar',
+          abajo_derecha: 'eliminar',
+        },
+      ],
+      ['papelera_dias', 0],
+      ['papelera_dias', 2.5],
+    ] as const
+    for (const [clave, valor] of malos) {
+      expect((await api('PUT', `/configuracion/${clave}`, { valor })).estado, clave).toBe(400)
+    }
+  })
+
+  it('personas en Configuración: renombrar, dar de baja, reactivar y ordenar', async () => {
+    const ana = (await api('POST', '/personas', { nombre: 'Ana' })).cuerpo.id as string
+    const beto = (await api('POST', '/personas', { nombre: 'Beto' })).cuerpo.id as string
+    let l = (await api('PATCH', `/personas/${ana}`, { nombre: 'Ana María', iniciales: null }))
+      .cuerpo
+    expect(l.find((p: { id: string }) => p.id === ana)).toMatchObject({
+      nombre: 'Ana María',
+      iniciales: 'AM',
+      activa: true,
+    })
+    l = (await api('PATCH', `/personas/${beto}`, { activa: false })).cuerpo
+    expect(l.find((p: { id: string }) => p.id === beto).activa).toBe(false)
+    // Dada de baja, ya no se ofrece en los formularios.
+    const cat = (await api('GET', '/catalogos')).cuerpo
+    expect(cat.personas.some((p: { id: string }) => p.id === beto)).toBe(false)
+    await api('PUT', '/personas/orden', { personas: [beto, ana] })
+    await api('PATCH', `/personas/${beto}`, { activa: true })
+    l = (await api('GET', '/personas')).cuerpo
+    expect(l.map((p: { nombre: string }) => p.nombre)).toEqual(['Beto', 'Ana María'])
+    // Otra activa con el mismo nombre: no.
+    expect((await api('PATCH', `/personas/${beto}`, { nombre: 'ana maría' })).estado).toBe(400)
+    expect((await api('PATCH', `/personas/${crypto.randomUUID()}`, {})).estado).toBe(404)
+  })
+
+  it('categorías: alta, editar, desactivar y ordenar', async () => {
+    const nueva = await api('POST', '/categorias', { nombre: 'Sublimación', tipo_aplica: 'pedido' })
+    expect(nueva.estado).toBe(201)
+    const id = nueva.cuerpo.id as string
+    expect((await api('POST', '/categorias', { nombre: 'sublimación' })).estado).toBe(400)
+    expect((await api('POST', '/categorias', { nombre: 'X', tipo_aplica: 'otro' })).estado).toBe(
+      400,
+    )
+    let l = (await api('PATCH', `/categorias/${id}`, { activa: false })).cuerpo
+    expect(l.find((c: { id: string }) => c.id === id).activa).toBe(false)
+    const cat = (await api('GET', '/catalogos')).cuerpo
+    expect(cat.categorias.some((c: { id: string }) => c.id === id)).toBe(false)
+    const todas = (await api('GET', '/categorias')).cuerpo as { id: string }[]
+    l = (
+      await api('PUT', '/categorias/orden', {
+        categorias: [id, ...todas.filter((c) => c.id !== id).map((c) => c.id)],
+      })
+    ).cuerpo
+    expect(l[0].id).toBe(id)
+  })
+
+  it('historial global: filtros por persona, tarea, texto y fecha, paginado', async () => {
+    const ana = (await api('POST', '/personas', { nombre: 'Ana Historial' })).cuerpo.id as string
+    const t = (
+      await api('POST', '/tareas', { tarea: { titulo: 'Folletos', importante: true } }, ana)
+    ).cuerpo.tarea.id as string
+    await api('POST', '/tareas', { tarea: { titulo: 'Otra cosa', importante: false } })
+    for (let i = 0; i < 55; i++) {
+      await api('PATCH', `/tareas/${t}`, { cambios: { descripcion: `v${i}` } }, ana)
+    }
+    const p1 = (await api('GET', `/historial?persona=${ana}`)).cuerpo
+    expect(p1.eventos).toHaveLength(50)
+    expect(p1.eventos[0]).toMatchObject({ persona: 'Ana Historial', tarea_titulo: 'Folletos' })
+    const p2 = (
+      await api('GET', `/historial?persona=${ana}&antes=${encodeURIComponent(p1.siguiente)}`)
+    ).cuerpo
+    expect(p2.eventos).toHaveLength(6) // 55 ediciones + el alta
+    expect(p2.siguiente).toBeNull()
+    expect((await api('GET', `/historial?tarea=${t}`)).cuerpo.eventos.length).toBe(50)
+    const porTexto = (await api('GET', '/historial?texto=otra cosa')).cuerpo.eventos
+    expect(porTexto).toHaveLength(1)
+    expect((await api('GET', '/historial?desde=2099-01-01T00:00:00Z')).cuerpo.eventos).toHaveLength(
+      0,
+    )
+    expect((await api('GET', '/historial?persona=nada')).estado).toBe(400)
+  })
+
+  it('respaldo: todas las tablas, sin los PIN', async () => {
+    const id = (await api('POST', '/personas', { nombre: 'Con PIN respaldo' })).cuerpo.id
+    await api('PUT', `/personas/${id}/pin`, { pin_actual: null, pin_nuevo: '1234' })
+    await api('POST', '/tareas', { tarea: { titulo: 'Para respaldar', importante: true } })
+    const r = (await api('GET', '/respaldo')).cuerpo
+    expect(Object.keys(r.tablas).sort()).toEqual([
+      'categorias',
+      'clientes',
+      'configuracion',
+      'eventos',
+      'personas',
+      'proyectos',
+      'subtareas',
+      'tarea_responsables',
+      'tareas',
+    ])
+    expect(r.tablas.tareas[0].titulo).toBe('Para respaldar')
+    const p = r.tablas.personas.find((x: { id: string }) => x.id === id)
+    expect(p.tiene_pin).toBe(true)
+    expect(JSON.stringify(r)).not.toContain('scrypt')
   })
 
   it('PIN: se guarda como hash, se verifica y para cambiarlo hay que saber el actual', async () => {

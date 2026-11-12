@@ -1,7 +1,8 @@
 /**
- * Configuración (especificación 7.12). Por ahora: confeti, mensaje para copiar y Papelera
- * (especificación 6.5): restaurar o borrar definitivamente. El resto de las
- * opciones llega en la Fase 9. Se carga diferido: no pesa en la pantalla principal.
+ * Configuración (especificación 7.12): personas, categorías, urgencia y
+ * cuadrantes, confeti y mensaje para copiar, Papelera (6.5: restaurar o borrar
+ * definitivamente, y cuántos días quedan) y Exportar respaldo. Se carga
+ * diferido: no pesa en la pantalla principal.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -14,6 +15,13 @@ import { AvisoSinConexion } from '../tarea/AvisoSinConexion'
 import { Confirmacion } from '../tarea/Confirmacion'
 import { Dialogo } from '../tarea/Dialogo'
 import { SeccionAvisos } from './Avisos'
+import {
+  DiasPapelera,
+  SeccionCategorias,
+  SeccionPersonas,
+  SeccionRespaldo,
+  SeccionUrgencia,
+} from './Secciones'
 
 interface TareaPapelera {
   id: string
@@ -55,8 +63,11 @@ export default function Configuracion({ ahora, onCerrar }: { ahora: Date; onCerr
 
   return (
     <>
-      <Dialogo titulo="Configuración" variante="lateral" sinGuardar={false} onCerrar={onCerrar}>
+      <Dialogo titulo="Configuración" variante="amplia" sinGuardar={false} onCerrar={onCerrar}>
         <AvisoSinConexion />
+        <SeccionPersonas />
+        <SeccionCategorias />
+        <SeccionUrgencia />
         <SeccionAvisos />
         <section className="co-seccion" aria-labelledby="co-titulo-papelera">
           <h3 id="co-titulo-papelera" className="co-subtitulo">
@@ -65,6 +76,7 @@ export default function Configuracion({ ahora, onCerrar }: { ahora: Date; onCerr
           <p className="co-texto-suave">
             Las tareas eliminadas quedan acá y se borran solas pasado el plazo.
           </p>
+          <DiasPapelera />
           {error && (
             <p className="co-aviso" role="alert">
               No se pudo completar: {error.message}
@@ -107,6 +119,7 @@ export default function Configuracion({ ahora, onCerrar }: { ahora: Date; onCerr
             ))}
           </ul>
         </section>
+        <SeccionRespaldo />
       </Dialogo>
       {aBorrar && (
         <Confirmacion

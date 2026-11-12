@@ -217,6 +217,46 @@ export function validarConfiguracion(clave: string, cuerpo: unknown): unknown {
   const o = objeto(cuerpo, 'Configuración')
   if (clave === 'confeti_activado') return booleano(o.valor, 'Confeti')
   if (clave === 'plantilla_mensaje') return texto(o.valor, 'Plantilla del mensaje', 500)
+  if (clave === 'papelera_dias') {
+    const n = o.valor
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > 365) {
+      falla('Días en la papelera: de 1 a 365')
+    }
+    return n
+  }
+  if (clave === 'umbrales_urgencia') {
+    const u = objeto(o.valor, 'Umbrales')
+    const horas = (k: string, nombre: string) => {
+      const n = u[k]
+      if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0 || n > 720) {
+        falla(`${nombre}: entre 0 y 720 horas`)
+      }
+      return Math.round(n * 100) / 100
+    }
+    const v = {
+      nivel_5_horas: horas('nivel_5_horas', 'Crítica'),
+      nivel_3_horas: horas('nivel_3_horas', 'Alta'),
+      nivel_2_horas: horas('nivel_2_horas', 'Media'),
+    }
+    if (!(v.nivel_5_horas < v.nivel_3_horas && v.nivel_3_horas < v.nivel_2_horas)) {
+      falla('Las horas tienen que ir de menor a mayor: crítica < alta < media')
+    }
+    return v
+  }
+  if (clave === 'disposicion_cuadrantes') {
+    const d = objeto(o.valor, 'Disposición')
+    const lugares = ['arriba_izquierda', 'arriba_derecha', 'abajo_izquierda', 'abajo_derecha']
+    const cuadrantes = ['hacer', 'planificar', 'delegar', 'eliminar']
+    const v = Object.fromEntries(lugares.map((l) => [l, d[l]]))
+    const valores = Object.values(v)
+    if (
+      !valores.every((x) => typeof x === 'string' && cuadrantes.includes(x)) ||
+      new Set(valores).size !== 4
+    ) {
+      falla('Disposición: cada cuadrante tiene que aparecer una vez')
+    }
+    return v
+  }
   throw new ErrorNoEncontrado('Esa configuración no se puede cambiar')
 }
 

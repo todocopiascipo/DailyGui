@@ -46,7 +46,9 @@ export function leerConfigMatriz(filas: { clave: string; valor: unknown }[]): Co
 
   const confeti = valor('confeti_activado')
   const plantilla = valor('plantilla_mensaje')
+  const dias = valor('papelera_dias')
   return {
+    papeleraDias: typeof dias === 'number' && Number.isInteger(dias) && dias > 0 ? dias : 30,
     umbrales,
     disposicion,
     confeti: typeof confeti === 'boolean' ? confeti : true,

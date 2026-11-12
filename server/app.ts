@@ -1,4 +1,16 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import {
+  armarRespaldo,
+  cargarHistorial,
+  crearCategoria,
+  editarCategoria,
+  editarPersona,
+  leerFiltrosHistorial,
+  listarCategorias,
+  listarPersonas,
+  ordenarCategorias,
+  ordenarPersonas,
+} from './administracion.ts'
 import { crearCanal, type Aviso } from './canal.ts'
 import {
   buscarClientes,
@@ -206,6 +218,43 @@ const RUTAS: [string, string, Manejador][] = [
     },
   ],
   ['GET', '/api/proyectos', ({ db }) => cargarProyectos(db)],
+  ['GET', '/api/personas', ({ db }) => listarPersonas(db)],
+  [
+    'PATCH',
+    '/api/personas/:id',
+    ({ db, params, cuerpo }) => {
+      editarPersona(db, params.id!, cuerpo)
+      return listarPersonas(db)
+    },
+  ],
+  [
+    'PUT',
+    '/api/personas/orden',
+    ({ db, cuerpo }) => {
+      ordenarPersonas(db, cuerpo)
+      return listarPersonas(db)
+    },
+  ],
+  ['GET', '/api/categorias', ({ db }) => listarCategorias(db)],
+  ['POST', '/api/categorias', ({ db, cuerpo }) => crearCategoria(db, cuerpo)],
+  [
+    'PATCH',
+    '/api/categorias/:id',
+    ({ db, params, cuerpo }) => {
+      editarCategoria(db, params.id!, cuerpo)
+      return listarCategorias(db)
+    },
+  ],
+  [
+    'PUT',
+    '/api/categorias/orden',
+    ({ db, cuerpo }) => {
+      ordenarCategorias(db, cuerpo)
+      return listarCategorias(db)
+    },
+  ],
+  ['GET', '/api/historial', ({ db, query }) => cargarHistorial(db, leerFiltrosHistorial(query))],
+  ['GET', '/api/respaldo', ({ db }) => armarRespaldo(db)],
   [
     'POST',
     '/api/proyectos',
@@ -308,6 +357,7 @@ function pistaDe(valor: string | null): Pista | undefined {
 /** Qué avisar a las pantallas conectadas después de un cambio que salió bien. */
 function avisoDe(metodo: string, ruta: string, resultado: unknown): Aviso {
   if (ruta.startsWith('/api/personas')) return { recursos: ['personas'] }
+  if (ruta.startsWith('/api/categorias')) return { recursos: ['catalogos'] }
   if (ruta.startsWith('/api/configuracion')) return { recursos: ['configuracion'] }
   if (ruta.startsWith('/api/proyectos')) return { recursos: ['proyectos', 'tareas'] }
   const tareaId =

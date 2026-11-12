@@ -9,6 +9,7 @@ describe('leerConfigMatriz', () => {
       disposicion: DISPOSICION_POR_DEFECTO,
       confeti: true,
       plantilla: PLANTILLA_POR_DEFECTO,
+      papeleraDias: 30,
     })
   })
 
