@@ -22,7 +22,7 @@ export function useConectado(): boolean {
 }
 
 interface Aviso {
-  recursos: ('tareas' | 'personas' | 'configuracion')[]
+  recursos: ('tareas' | 'personas' | 'configuracion' | 'proyectos')[]
   tarea_id?: string | null
 }
 
@@ -35,6 +35,15 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
     void qc.invalidateQueries({ queryKey: ['papelera'] })
     void qc.invalidateQueries({ queryKey: ['hechas'] })
     void qc.invalidateQueries({ queryKey: ['mis-tareas'] })
+    // El avance de cada proyecto depende de sus tareas.
+    void qc.invalidateQueries({ queryKey: ['proyectos'] })
+    void qc.invalidateQueries({ queryKey: ['proyecto'] })
+  }
+  if (aviso.recursos.includes('proyectos')) {
+    void qc.invalidateQueries({ queryKey: ['proyectos'] })
+    void qc.invalidateQueries({ queryKey: ['proyecto'] })
+    void qc.invalidateQueries({ queryKey: ['catalogos'] })
+    void qc.invalidateQueries({ queryKey: ['matriz'] })
   }
   if (aviso.recursos.includes('configuracion')) {
     void qc.invalidateQueries({ queryKey: ['matriz'] })

@@ -8,6 +8,8 @@ import {
   cargarMisTareas,
   cargarHechas,
   cargarPapelera,
+  cargarProyecto,
+  cargarProyectos,
 } from './consultas.ts'
 import type { BaseDeDatos } from './db.ts'
 import type { Pista } from './reglas.ts'
@@ -31,6 +33,10 @@ import {
   eliminarSubtarea,
   ErrorNoEncontrado,
   ErrorValidacion,
+  crearProyecto,
+  actualizarProyecto,
+  eliminarProyecto,
+  ordenarTareasProyecto,
   type Contexto,
 } from './servicio.ts'
 import {
@@ -41,6 +47,8 @@ import {
   validarCambioPin,
   validarConfiguracion,
   validarNuevaTarea,
+  validarOrdenProyecto,
+  validarProyecto,
   validarVerificarPin,
 } from './validar.ts'
 
@@ -197,6 +205,48 @@ const RUTAS: [string, string, Manejador][] = [
       return cargarDetalle(db, fila.tarea_id)
     },
   ],
+  ['GET', '/api/proyectos', ({ db }) => cargarProyectos(db)],
+  [
+    'POST',
+    '/api/proyectos',
+    ({ db, ctx, cuerpo }) => {
+      const datos = validarProyecto(cuerpo, true) as Parameters<typeof crearProyecto>[2]
+      return cargarProyecto(db, crearProyecto(db, ctx, datos).id)
+    },
+  ],
+  [
+    'GET',
+    '/api/proyectos/:id',
+    ({ db, params }) => {
+      const p = cargarProyecto(db, params.id!)
+      if (!p) throw new ErrorNoEncontrado('El proyecto no existe')
+      return p
+    },
+  ],
+  [
+    'PATCH',
+    '/api/proyectos/:id',
+    ({ db, ctx, params, cuerpo }) => {
+      actualizarProyecto(db, ctx, params.id!, validarProyecto(cuerpo, false))
+      return cargarProyecto(db, params.id!)
+    },
+  ],
+  [
+    'DELETE',
+    '/api/proyectos/:id',
+    ({ db, ctx, params }) => {
+      eliminarProyecto(db, ctx, params.id!)
+      return { ok: true }
+    },
+  ],
+  [
+    'PUT',
+    '/api/proyectos/:id/orden',
+    ({ db, params, cuerpo }) => {
+      ordenarTareasProyecto(db, params.id!, validarOrdenProyecto(cuerpo))
+      return cargarProyecto(db, params.id!)
+    },
+  ],
 ]
 
 /** Busca la ruta que coincide y extrae los parámetros. */
@@ -259,6 +309,7 @@ function pistaDe(valor: string | null): Pista | undefined {
 function avisoDe(metodo: string, ruta: string, resultado: unknown): Aviso {
   if (ruta.startsWith('/api/personas')) return { recursos: ['personas'] }
   if (ruta.startsWith('/api/configuracion')) return { recursos: ['configuracion'] }
+  if (ruta.startsWith('/api/proyectos')) return { recursos: ['proyectos', 'tareas'] }
   const tareaId =
     typeof resultado === 'object' && resultado !== null && 'tarea' in resultado
       ? ((resultado as { tarea: { id?: string } }).tarea.id ?? null)

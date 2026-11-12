@@ -573,6 +573,94 @@ describe('API de edición', () => {
     expect(e.cuerpo.tarea.pedido_id).toBeNull()
   })
 
+  it('proyectos: alta, tareas, avance, regla de la matriz, orden y borrado', async () => {
+    const p = await api('POST', '/proyectos', { nombre: 'Vidriera nueva' })
+    expect(p.estado).toBe(201)
+    expect(p.cuerpo.proyecto).toMatchObject({
+      nombre: 'Vidriera nueva',
+      estado: 'activo',
+      progreso: { total: 0, hechas: 0 },
+    })
+    const pid = p.cuerpo.proyecto.id as string
+    const crear = async (titulo: string, extra: Record<string, unknown> = {}) =>
+      (
+        await api('POST', '/tareas', {
+          tarea: { titulo, importante: false, tipo: 'interna', proyecto_id: pid, ...extra },
+        })
+      ).cuerpo
+    const sinFecha = await crear('Medir vidriera')
+    const conFecha = await crear('Pedir presupuesto', {
+      fecha_entrega: '2026-12-01T15:00:00.000Z',
+    })
+    // Sin fecha ni "en proceso" no aparece en la matriz; con fecha, sí.
+    expect(sinFecha.tarea.mostrar_en_matriz).toBe(false)
+    expect(conFecha.tarea.mostrar_en_matriz).toBe(true)
+    expect(sinFecha.proyecto).toEqual({ id: pid, nombre: 'Vidriera nueva' })
+    const enMatriz = async () =>
+      ((await api('GET', '/matriz')).cuerpo.tareas as { titulo: string }[]).map((t) => t.titulo)
+    expect(await enMatriz()).toContain('Pedir presupuesto')
+    expect(await enMatriz()).not.toContain('Medir vidriera')
+
+    // Pasar a "en proceso" la prende sola; el interruptor manda.
+    const id1 = sinFecha.tarea.id as string
+    let e = await api('PATCH', `/tareas/${id1}`, { cambios: { estado: 'en_proceso' } })
+    expect(e.cuerpo.tarea.mostrar_en_matriz).toBe(true)
+    e = await api('PATCH', `/tareas/${id1}`, { cambios: { mostrar_en_matriz: false } })
+    expect(e.cuerpo.tarea.mostrar_en_matriz).toBe(false)
+    e = await api('PATCH', `/tareas/${id1}`, { cambios: { titulo: 'Medir vidriera bien' } })
+    expect(e.cuerpo.tarea.mostrar_en_matriz).toBe(false)
+    // Sacarla del proyecto la vuelve a mostrar siempre.
+    e = await api('PATCH', `/tareas/${id1}`, { cambios: { proyecto_id: null } })
+    expect(e.cuerpo.tarea.mostrar_en_matriz).toBe(true)
+    e = await api('PATCH', `/tareas/${id1}`, { cambios: { proyecto_id: pid } })
+    expect(e.cuerpo.tarea.mostrar_en_matriz).toBe(true) // está en proceso
+
+    // Avance y orden.
+    await api('POST', `/tareas/${conFecha.tarea.id}/terminar`)
+    let d = (await api('GET', `/proyectos/${pid}`)).cuerpo
+    expect(d.proyecto.progreso).toEqual({ total: 2, hechas: 1 })
+    expect(d.tareas.map((t: { titulo: string }) => t.titulo)).toEqual([
+      'Pedir presupuesto',
+      'Medir vidriera bien',
+    ])
+    d = (await api('PUT', `/proyectos/${pid}/orden`, { tareas: [id1, conFecha.tarea.id] })).cuerpo
+    expect(d.tareas[0].id).toBe(id1)
+
+    // Edición con historial; estado solo → "proyecto_estado".
+    const ana = (await api('POST', '/personas', { nombre: 'Ana Proyectos' })).cuerpo.id as string
+    d = (await api('PATCH', `/proyectos/${pid}`, { estado: 'en_pausa' }, ana)).cuerpo
+    expect(d.proyecto.estado).toBe('en_pausa')
+    expect(d.eventos[0]).toMatchObject({ accion: 'proyecto_estado', persona: 'Ana Proyectos' })
+    const lista = (await api('GET', '/proyectos')).cuerpo as { id: string }[]
+    expect(lista.some((x) => x.id === pid)).toBe(true)
+    const cat = (await api('GET', '/catalogos')).cuerpo
+    expect(cat.proyectos).toContainEqual({ id: pid, nombre: 'Vidriera nueva' })
+
+    // Reglas: solo internas, proyecto existente, fechas en orden, nombre obligatorio.
+    const malos = [
+      { tarea: { titulo: 'x', importante: true, tipo: 'pedido', proyecto_id: pid } },
+      {
+        tarea: { titulo: 'x', importante: true, tipo: 'interna', proyecto_id: crypto.randomUUID() },
+      },
+    ]
+    for (const c of malos) expect((await api('POST', '/tareas', c)).estado).toBe(400)
+    expect((await api('POST', '/proyectos', { nombre: '' })).estado).toBe(400)
+    expect(
+      (
+        await api('PATCH', `/proyectos/${pid}`, {
+          fecha_inicio: '2026-12-10T00:00:00.000Z',
+          fecha_objetivo: '2026-12-01T00:00:00.000Z',
+        })
+      ).estado,
+    ).toBe(400)
+
+    // Con tareas no se borra; sin tareas, sí.
+    expect((await api('DELETE', `/proyectos/${pid}`)).estado).toBe(400)
+    const vacio = (await api('POST', '/proyectos', { nombre: 'Vacío' })).cuerpo.proyecto.id
+    expect((await api('DELETE', `/proyectos/${vacio}`)).estado).toBe(200)
+    expect((await api('GET', `/proyectos/${vacio}`)).estado).toBe(404)
+  })
+
   it('rechaza datos inválidos sin guardar nada', async () => {
     const casos = [
       { tarea: { titulo: '', importante: true } },

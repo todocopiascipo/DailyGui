@@ -31,6 +31,10 @@ export interface TareaMatriz {
   cliente: { nombre: string; telefono: string | null } | null
   /** Tarea interna relacionada con un pedido (orden de trabajo). */
   pedido?: { id: string; titulo: string } | null
+  /** Proyecto interno al que pertenece (si tiene). */
+  proyecto?: { id: string; nombre: string } | null
+  /** Si aparece en la matriz (las tareas de proyecto pueden no aparecer). */
+  mostrar_en_matriz?: boolean
   responsables: PersonaBreve[]
   subtareas: { total: number; hechas: number }
   /** Se está guardando (creación optimista): todavía no se puede abrir. */

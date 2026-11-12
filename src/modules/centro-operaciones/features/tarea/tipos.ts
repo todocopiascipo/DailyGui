@@ -13,6 +13,8 @@ export interface Categoria {
 export interface Catalogos {
   personas: PersonaBreve[]
   categorias: Categoria[]
+  /** Proyectos abiertos (activos o en pausa), para el campo "Proyecto". */
+  proyectos?: { id: string; nombre: string }[]
 }
 
 export interface Cliente {
@@ -46,4 +48,6 @@ export interface DetalleTarea {
   eventos: EventoDetalle[]
   /** Pedido relacionado (si es una tarea interna enlazada a una OT). */
   pedido?: { id: string; titulo: string } | null
+  /** Proyecto interno al que pertenece. */
+  proyecto?: { id: string; nombre: string } | null
 }

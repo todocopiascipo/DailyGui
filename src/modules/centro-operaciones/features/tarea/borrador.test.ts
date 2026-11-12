@@ -41,6 +41,7 @@ const detalle: DetalleTarea = {
     terminada_at: null,
     entregada_at: null,
     mostrar_en_matriz: true,
+    orden_proyecto: 0,
     eliminada_at: null,
     eliminada_por: null,
     creada_por: null,

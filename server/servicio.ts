@@ -3,10 +3,12 @@
  * aplica las reglas automáticas y registra el historial (una sola vía).
  */
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
+import type { Database } from '../src/modules/centro-operaciones/lib/database.types.ts'
 import { enTransaccion, type BaseDeDatos } from './db.ts'
 import {
   diferencias,
   eventoDeTarea,
+  reglaMostrarEnMatriz,
   reglasAlGuardar,
   type AccionEvento,
   type Evento,
@@ -48,6 +50,7 @@ const COLUMNAS_TAREA = [
   'terminada_at',
   'entregada_at',
   'mostrar_en_matriz',
+  'orden_proyecto',
   'eliminada_at',
   'eliminada_por',
   'creada_por',
@@ -64,6 +67,7 @@ export function aTarea(fila: Fila): Tarea {
     ...(fila as unknown as Tarea),
     importante: fila.importante === 1,
     mostrar_en_matriz: fila.mostrar_en_matriz === 1,
+    orden_proyecto: Number(fila.orden_proyecto ?? 0),
     sena: Number(fila.sena),
     saldo: Number(fila.saldo),
   }
@@ -138,6 +142,7 @@ export function crearTarea(
       terminada_at: null,
       entregada_at: null,
       mostrar_en_matriz: true,
+      orden_proyecto: 0,
       eliminada_at: null,
       eliminada_por: null,
       creada_por: null,
@@ -150,6 +155,7 @@ export function crearTarea(
     }
     const tarea = reglasAlGuardar(null, base, persona, ahora)
     controlarPedido(db, tarea)
+    controlarProyecto(db, null, tarea, 'mostrar_en_matriz' in datos)
     db.prepare(
       `INSERT INTO tareas (${COLUMNAS_TAREA.join(', ')})
        VALUES (${COLUMNAS_TAREA.map(() => '?').join(', ')})`,
@@ -205,6 +211,7 @@ export function actualizarTarea(
     }
     const nueva = reglasAlGuardar(anterior, { ...anterior, ...datos }, persona, ahora)
     controlarPedido(db, nueva)
+    controlarProyecto(db, anterior, nueva, 'mostrar_en_matriz' in cambios)
     const columnas = COLUMNAS_TAREA.filter((c) => c !== 'id' && c !== 'updated_at')
     db.prepare(`UPDATE tareas SET ${columnas.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).run(
       ...columnas.map((c) => aSqlite(nueva[c])),
@@ -228,6 +235,34 @@ function controlarPedido(db: BaseDeDatos, t: Tarea) {
   if (!pedido || pedido.id === t.id || pedido.tipo !== 'pedido') {
     throw new ErrorValidacion('El pedido relacionado no existe')
   }
+}
+
+/**
+ * Proyecto: solo en tareas internas y tiene que existir. Al entrar a un
+ * proyecto, la tarea va al final de su lista. Aplica la regla de
+ * "Mostrar en la matriz" (modifica `t`).
+ */
+function controlarProyecto(db: BaseDeDatos, anterior: Tarea | null, t: Tarea, explicito: boolean) {
+  if (t.proyecto_id) {
+    if (t.tipo !== 'interna') throw new ErrorValidacion('Solo las tareas internas van en proyectos')
+    if (!db.prepare('SELECT 1 FROM proyectos WHERE id = ?').get(t.proyecto_id)) {
+      throw new ErrorValidacion('El proyecto no existe')
+    }
+    if (anterior?.proyecto_id !== t.proyecto_id) {
+      t.orden_proyecto = Number(
+        (
+          db
+            .prepare(
+              'SELECT coalesce(max(orden_proyecto), -1) + 1 AS n FROM tareas WHERE proyecto_id = ?',
+            )
+            .get(t.proyecto_id) as Fila
+        ).n,
+      )
+    }
+  } else {
+    t.orden_proyecto = 0
+  }
+  t.mostrar_en_matriz = reglaMostrarEnMatriz(anterior, t, explicito)
 }
 
 function idsResponsables(db: BaseDeDatos, tareaId: string): string[] {
@@ -694,6 +729,167 @@ export function cambiarPin(
     datos.pin_nuevo ? hashPin(datos.pin_nuevo) : null,
     id,
   )
+}
+
+// ---------------------------------------------------------------------------
+// Proyectos internos (especificación 7.9, Fase 8)
+// ---------------------------------------------------------------------------
+
+export type Proyecto = Database['public']['Tables']['proyectos']['Row']
+
+export type DatosProyecto = Partial<
+  Pick<
+    Proyecto,
+    | 'nombre'
+    | 'descripcion'
+    | 'estado'
+    | 'fecha_inicio'
+    | 'fecha_objetivo'
+    | 'responsable_id'
+    | 'categoria_id'
+  >
+>
+
+const COLUMNAS_PROYECTO = [
+  'nombre',
+  'descripcion',
+  'estado',
+  'fecha_inicio',
+  'fecha_objetivo',
+  'responsable_id',
+  'categoria_id',
+] as const
+
+export function leerProyecto(db: BaseDeDatos, id: string): Proyecto | null {
+  return (
+    (db.prepare('SELECT * FROM proyectos WHERE id = ?').get(id) as Proyecto | undefined) ?? null
+  )
+}
+
+function controlarFechasProyecto(p: DatosProyecto) {
+  if (p.fecha_inicio && p.fecha_objetivo && p.fecha_objetivo < p.fecha_inicio) {
+    throw new ErrorValidacion('La fecha objetivo no puede ser anterior al inicio')
+  }
+}
+
+function eventoProyecto(
+  db: BaseDeDatos,
+  accion: AccionEvento,
+  proyectoId: string | null,
+  persona: string | null,
+  cambios: Record<string, unknown>,
+  ahora: string,
+) {
+  registrar(
+    db,
+    { accion, tarea_id: null, proyecto_id: proyectoId, persona_id: persona, cambios },
+    ahora,
+  )
+}
+
+export function crearProyecto(
+  db: BaseDeDatos,
+  ctx: Contexto,
+  datos: DatosProyecto & { nombre: string; id?: string },
+): Proyecto {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  controlarFechasProyecto(datos)
+  return enTransaccion(db, () => {
+    const persona = personaValida(db, ctx.persona)
+    const id = datos.id ?? randomUUID()
+    const orden = Number(
+      (db.prepare('SELECT coalesce(max(orden), 0) + 10 AS n FROM proyectos').get() as Fila).n,
+    )
+    const valores = {
+      nombre: datos.nombre,
+      descripcion: datos.descripcion ?? null,
+      estado: datos.estado ?? 'activo',
+      fecha_inicio: datos.fecha_inicio ?? null,
+      fecha_objetivo: datos.fecha_objetivo ?? null,
+      responsable_id: datos.responsable_id ?? null,
+      categoria_id: datos.categoria_id ?? null,
+    }
+    db.prepare(
+      `INSERT INTO proyectos (id, ${COLUMNAS_PROYECTO.join(', ')}, orden, created_at, updated_at)
+       VALUES (?, ${COLUMNAS_PROYECTO.map(() => '?').join(', ')}, ?, ?, ?)`,
+    ).run(id, ...COLUMNAS_PROYECTO.map((c) => valores[c]), orden, ahora, ahora)
+    eventoProyecto(db, 'proyecto_creado', id, persona, { nombre: valores.nombre }, ahora)
+    return leerProyecto(db, id)!
+  })
+}
+
+export function actualizarProyecto(
+  db: BaseDeDatos,
+  ctx: Contexto,
+  id: string,
+  cambios: DatosProyecto,
+): Proyecto {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  return enTransaccion(db, () => {
+    const antes = leerProyecto(db, id)
+    if (!antes) throw new ErrorNoEncontrado('El proyecto no existe')
+    const persona = personaValida(db, ctx.persona)
+    const nuevo = { ...antes, ...cambios }
+    controlarFechasProyecto(nuevo)
+    db.prepare(
+      `UPDATE proyectos SET ${COLUMNAS_PROYECTO.map((c) => `${c} = ?`).join(', ')}, updated_at = ?
+       WHERE id = ?`,
+    ).run(...COLUMNAS_PROYECTO.map((c) => nuevo[c]), ahora, id)
+    const dif = diferencias(
+      Object.fromEntries(COLUMNAS_PROYECTO.map((c) => [c, antes[c]])),
+      Object.fromEntries(COLUMNAS_PROYECTO.map((c) => [c, nuevo[c]])),
+      [],
+    )
+    if (Object.keys(dif).length > 0) {
+      eventoProyecto(
+        db,
+        dif.estado ? 'proyecto_estado' : 'proyecto_editado',
+        id,
+        persona,
+        { ...dif, nombre: nuevo.nombre },
+        ahora,
+      )
+    }
+    return leerProyecto(db, id)!
+  })
+}
+
+/** Solo se borra un proyecto sin tareas (si tiene, se cancela o se termina). */
+export function eliminarProyecto(db: BaseDeDatos, ctx: Contexto, id: string): void {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  enTransaccion(db, () => {
+    const p = leerProyecto(db, id)
+    if (!p) throw new ErrorNoEncontrado('El proyecto no existe')
+    const tareas = db
+      .prepare('SELECT 1 FROM tareas WHERE proyecto_id = ? AND eliminada_at IS NULL')
+      .get(id)
+    if (tareas) {
+      throw new ErrorValidacion(
+        'El proyecto tiene tareas: cancelalo o terminalo en vez de borrarlo',
+      )
+    }
+    const persona = personaValida(db, ctx.persona)
+    db.prepare('DELETE FROM proyectos WHERE id = ?').run(id)
+    eventoProyecto(
+      db,
+      'proyecto_eliminado',
+      null,
+      persona,
+      { nombre: p.nombre, proyecto_id: id },
+      ahora,
+    )
+  })
+}
+
+/** Nuevo orden de las tareas del proyecto (lista de ids, de arriba a abajo). */
+export function ordenarTareasProyecto(db: BaseDeDatos, id: string, ids: string[]): void {
+  enTransaccion(db, () => {
+    if (!leerProyecto(db, id)) throw new ErrorNoEncontrado('El proyecto no existe')
+    const actualizar = db.prepare(
+      'UPDATE tareas SET orden_proyecto = ? WHERE id = ? AND proyecto_id = ?',
+    )
+    ids.forEach((t, i) => actualizar.run(i, t, id))
+  })
 }
 
 export class ErrorNoEncontrado extends Error {}

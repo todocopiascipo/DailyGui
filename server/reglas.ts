@@ -31,6 +31,7 @@ const IGNORAR_EN_HISTORIAL = [
   'eliminada_por',
   'terminada_at',
   'entregada_at',
+  'orden_proyecto',
 ] as const
 
 /**
@@ -154,4 +155,25 @@ export function eventoDeTarea(
     persona_id: persona ?? nueva.actualizada_por,
     cambios: { ...cambios, titulo: nueva.titulo },
   }
+}
+
+/**
+ * Proyectos internos (decisión 11): una tarea de proyecto aparece en la matriz
+ * sola cuando tiene fecha de entrega o está en proceso; el interruptor
+ * "Mostrar en la matriz" (`explicito`) siempre manda. Las tareas sin proyecto
+ * se muestran siempre.
+ */
+export function reglaMostrarEnMatriz(
+  anterior: Tarea | null,
+  nueva: Tarea,
+  explicito: boolean,
+): boolean {
+  if (!nueva.proyecto_id) return true
+  if (explicito) return nueva.mostrar_en_matriz
+  const lapide = (t: Tarea) => t.fecha_entrega !== null || t.estado === 'en_proceso'
+  // Recién entra al proyecto: según tenga fecha o esté en proceso.
+  if (!anterior || anterior.proyecto_id !== nueva.proyecto_id) return lapide(nueva)
+  // Ganó fecha de entrega o pasó a en proceso: se prende.
+  if (lapide(nueva) && !lapide(anterior)) return true
+  return nueva.mostrar_en_matriz
 }

@@ -10,6 +10,10 @@ import type {
   EventoDetalle,
 } from '../src/modules/centro-operaciones/features/tarea/tipos.ts'
 import type { TareaMia } from '../src/modules/centro-operaciones/features/mis-tareas/tipos.ts'
+import type {
+  ProyectoDetalle,
+  ProyectoResumen,
+} from '../src/modules/centro-operaciones/features/proyectos/tipos.ts'
 import type { BaseDeDatos } from './db.ts'
 import { aSubtarea, leerTarea } from './servicio.ts'
 
@@ -25,7 +29,9 @@ const COLUMNAS_TARJETA = `t.id, t.tipo, t.titulo, t.importante, t.urgencia_manua
   c.nombre_apellido AS cliente_nombre, c.telefono AS cliente_telefono,
   (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id) AS sub_total,
   (SELECT count(*) FROM subtareas s WHERE s.tarea_id = t.id AND s.hecha = 1) AS sub_hechas,
-  t.pedido_id, (SELECT x.titulo FROM tareas x WHERE x.id = t.pedido_id) AS pedido_titulo
+  t.pedido_id, (SELECT x.titulo FROM tareas x WHERE x.id = t.pedido_id) AS pedido_titulo,
+  t.proyecto_id, (SELECT y.nombre FROM proyectos y WHERE y.id = t.proyecto_id) AS proyecto_nombre,
+  t.mostrar_en_matriz
   FROM tareas t LEFT JOIN clientes c ON c.id = t.cliente_id`
 
 /** Lo que muestra la matriz: tareas activas, con responsables y avance de subtareas. */
@@ -117,6 +123,10 @@ function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatr
       ? { nombre: String(f.cliente_nombre), telefono: texto(f.cliente_telefono) }
       : null,
     pedido: f.pedido_id ? { id: String(f.pedido_id), titulo: String(f.pedido_titulo) } : null,
+    proyecto: f.proyecto_id
+      ? { id: String(f.proyecto_id), nombre: String(f.proyecto_nombre) }
+      : null,
+    mostrar_en_matriz: f.mostrar_en_matriz === 1,
     responsables: responsables.get(String(f.id)) ?? [],
     subtareas: { total: Number(f.sub_total), hechas: Number(f.sub_hechas) },
   }))
@@ -140,7 +150,14 @@ export function cargarCatalogos(db: BaseDeDatos): Catalogos {
       'SELECT id, nombre, tipo_aplica FROM categorias WHERE activa = 1 ORDER BY orden, nombre',
     )
     .all() as unknown as Categoria[]
-  return { personas, categorias }
+  // Proyectos abiertos, para elegir a cuál pertenece una tarea interna.
+  const proyectos = db
+    .prepare(
+      `SELECT id, nombre FROM proyectos WHERE estado IN ('activo', 'en_pausa')
+       ORDER BY orden, nombre`,
+    )
+    .all() as unknown as { id: string; nombre: string }[]
+  return { personas, categorias, proyectos }
 }
 
 /** Clientes con ese teléfono (para ofrecer reutilizarlos). */
@@ -207,7 +224,12 @@ export function cargarDetalle(db: BaseDeDatos, id: string): DetalleTarea | null 
     ? ((db.prepare('SELECT id, titulo FROM tareas WHERE id = ?').get(tarea.pedido_id) as unknown as
         { id: string; titulo: string } | undefined) ?? null)
     : null
-  return { tarea, responsables, subtareas, cliente, creada_por, eventos, pedido }
+  const proyecto = tarea.proyecto_id
+    ? ((db
+        .prepare('SELECT id, nombre FROM proyectos WHERE id = ?')
+        .get(tarea.proyecto_id) as unknown as { id: string; nombre: string } | undefined) ?? null)
+    : null
+  return { tarea, responsables, subtareas, cliente, creada_por, eventos, pedido, proyecto }
 }
 
 export interface TareaPapelera {
@@ -275,4 +297,78 @@ export function cargarMisTareas(db: BaseDeDatos, personaId: string): TareaMia[] 
         : null,
     })),
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Proyectos internos (especificación 7.9)
+// ---------------------------------------------------------------------------
+
+const COLUMNAS_PROYECTO = `p.id, p.nombre, p.descripcion, p.estado, p.fecha_inicio, p.fecha_objetivo,
+  p.categoria_id, p.orden, p.created_at,
+  r.id AS r_id, r.nombre AS r_nombre, r.iniciales AS r_iniciales,
+  (SELECT count(*) FROM tareas t WHERE t.proyecto_id = p.id AND t.eliminada_at IS NULL
+     AND t.estado <> 'cancelada') AS total,
+  (SELECT count(*) FROM tareas t WHERE t.proyecto_id = p.id AND t.eliminada_at IS NULL
+     AND t.estado IN ('terminada', 'entregada')) AS hechas
+  FROM proyectos p LEFT JOIN personas r ON r.id = p.responsable_id`
+
+function aProyecto(f: Record<string, unknown>): ProyectoResumen {
+  const texto = (v: unknown) => (v ?? null) as string | null
+  return {
+    id: String(f.id),
+    nombre: String(f.nombre),
+    descripcion: texto(f.descripcion),
+    estado: f.estado as ProyectoResumen['estado'],
+    fecha_inicio: texto(f.fecha_inicio),
+    fecha_objetivo: texto(f.fecha_objetivo),
+    categoria_id: texto(f.categoria_id),
+    responsable: f.r_id
+      ? { id: String(f.r_id), nombre: String(f.r_nombre), iniciales: texto(f.r_iniciales) }
+      : null,
+    progreso: { total: Number(f.total), hechas: Number(f.hechas) },
+  }
+}
+
+/** Lista de proyectos: primero los activos, después en pausa, terminados y cancelados. */
+export function cargarProyectos(db: BaseDeDatos): ProyectoResumen[] {
+  return (
+    db
+      .prepare(
+        `SELECT ${COLUMNAS_PROYECTO}
+         ORDER BY CASE p.estado WHEN 'activo' THEN 0 WHEN 'en_pausa' THEN 1
+                  WHEN 'terminado' THEN 2 ELSE 3 END,
+                  p.fecha_objetivo IS NULL, p.fecha_objetivo, p.orden, p.nombre`,
+      )
+      .all() as Record<string, unknown>[]
+  ).map(aProyecto)
+}
+
+/** Un proyecto con sus tareas (en su orden) y su historial. */
+export function cargarProyecto(db: BaseDeDatos, id: string): ProyectoDetalle | null {
+  const f = db.prepare(`SELECT ${COLUMNAS_PROYECTO} WHERE p.id = ?`).get(id) as
+    Record<string, unknown> | undefined
+  if (!f) return null
+  const filas = db
+    .prepare(
+      `SELECT ${COLUMNAS_TARJETA}
+       WHERE t.proyecto_id = ? AND t.eliminada_at IS NULL
+       ORDER BY t.orden_proyecto, t.created_at`,
+    )
+    .all(id) as Record<string, unknown>[]
+  const eventos = (
+    db
+      .prepare(
+        `SELECT e.id, e.accion, p.nombre AS persona, e.cambios, e.created_at
+         FROM eventos e LEFT JOIN personas p ON p.id = e.persona_id
+         WHERE e.proyecto_id = ? ORDER BY e.created_at DESC, e.rowid DESC LIMIT 100`,
+      )
+      .all(id) as Record<string, unknown>[]
+  ).map((e): EventoDetalle => ({
+    id: String(e.id),
+    accion: String(e.accion) as EventoDetalle['accion'],
+    persona: (e.persona ?? null) as string | null,
+    cambios: JSON.parse(String(e.cambios)) as Record<string, unknown>,
+    created_at: String(e.created_at),
+  }))
+  return { proyecto: aProyecto(f), tareas: aTarjetas(db, filas), eventos }
 }

@@ -68,6 +68,21 @@ export function rutaARpc(
     if (m === 'DELETE') return rpc('co_borrar_subtarea', { p_id: id })
   }
 
+  if (a === 'proyectos') {
+    if (partes.length === 1) {
+      if (m === 'GET') return rpc('co_proyectos')
+      if (m === 'POST') return rpc('co_crear_proyecto', { p: cuerpo ?? {} })
+    }
+    if (partes.length === 2) {
+      if (m === 'GET') return rpc('co_proyecto', { p_id: id })
+      if (m === 'PATCH') return rpc('co_editar_proyecto', { p_id: id, p: cuerpo ?? {} })
+      if (m === 'DELETE') return rpc('co_borrar_proyecto', { p_id: id })
+    }
+    if (partes.length === 3 && b === 'orden' && m === 'PUT') {
+      return rpc('co_ordenar_proyecto', { p_id: id, p: cuerpo ?? {} })
+    }
+  }
+
   if (a === 'configuracion' && partes.length === 2 && m === 'PUT') {
     return rpc('co_guardar_configuracion', { p_clave: id, p: cuerpo ?? {} })
   }

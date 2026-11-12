@@ -344,6 +344,7 @@ export type Database = {
           motivo_espera: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle: string | null
           pedido_id: string | null
+          orden_proyecto: number
           proyecto_id: string | null
           saldo: number
           saldo_medio: Database['public']['Enums']['medio_pago'] | null
@@ -375,6 +376,7 @@ export type Database = {
           motivo_espera?: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle?: string | null
           pedido_id?: string | null
+          orden_proyecto?: number
           proyecto_id?: string | null
           saldo?: number
           saldo_medio?: Database['public']['Enums']['medio_pago'] | null
@@ -406,6 +408,7 @@ export type Database = {
           motivo_espera?: Database['public']['Enums']['motivo_espera'] | null
           motivo_espera_detalle?: string | null
           pedido_id?: string | null
+          orden_proyecto?: number
           proyecto_id?: string | null
           saldo?: number
           saldo_medio?: Database['public']['Enums']['medio_pago'] | null
