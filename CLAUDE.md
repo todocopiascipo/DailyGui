@@ -38,7 +38,7 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 
 ## Estado (al 2026-11-12)
 
-Hechas: Fases 0–10 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
+Hechas: Fases 0–11 (todas las del plan) y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
 matriz, crear/editar, tiempo real, arrastrar y soltar con tacho y papelera,
 OT con forma de la de papel, terminar/entregar/devolver, "Hechas hoy",
 "Copiar mensaje", "¿Quién soy?" con PIN, "Mis tareas"; "+" = tareas internas
@@ -49,7 +49,12 @@ borde izquierdo, historial global, configuración completa y respaldo (Fase 9);
 modo pantalla, PWA instalable (ícono provisorio) y notificaciones con la app
 abierta (Fase 10).
 
-**Siguiente: Fase 11** (cierre). El usuario autorizó hacerla seguida (2026-11-12).
+Cierre (Fase 11): accesibilidad revisada con axe (`e2e/accesibilidad.spec.ts`),
+README completo, listo para Vercel sin desplegar.
+
+**Siguiente:** lo que pida el usuario. Lo "posterior" de la especificación
+(sección 14: Vercel, Web Push con la app cerrada, Gantt, concatenar tareas,
+roles, fidelización, edición sin conexión) solo con pedido explícito.
 
 Advisors de Supabase: los avisos "anon/authenticated puede ejecutar SECURITY
 DEFINER" y "RLS sin políticas" en `privado.*` son intencionales (acceso por

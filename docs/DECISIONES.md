@@ -53,6 +53,7 @@ especificación (`ESPECIFICACION.md`).
 | 2026-11-12 | App instalable (PWA) | Manifest e íconos para instalarla en la pantalla de inicio (iPad: Compartir › Agregar a inicio; PC: ícono de instalar en la barra). Service worker solo para los archivos de la app (nunca datos). El ícono es **provisorio** (fondo de marca con los cuatro cuadrantes, no es el logo): se reemplaza cuando llegue el SVG del usuario (`public/iconos/icono.svg` y `node scripts/iconos.mjs`). |
 | 2026-11-12 | Clave en la app instalada | En el iPad la app instalada no comparte lo guardado con Safari: si no tiene la clave, la pantalla de "abrí el link de acceso" deja pegar el link (o el código) una vez. |
 | 2026-11-12 | Notificaciones (sección 8) | Con la app abierta, activadas por dispositivo con un botón en Configuración (nunca al abrir). Con persona elegida: tarea asignada, se entrega hoy y vencida, de sus tareas; sin persona (monitor): se entrega hoy y vencida de todas. Lo que ya correspondía al abrir no avisa. En el iPad funcionan solo con la app instalada (HTTPS ya lo da GitHub Pages). Push con la app cerrada sigue para más adelante. |
+| 2026-11-12 | Cierre (Fase 11) | Pasada completa de pruebas (unidad, servidor, Supabase y punta a punta en escritorio e iPad), revisión de accesibilidad con axe (sin problemas serios ni críticos), tamaño de carga medido, README con variables, despliegue y respaldo. Listo para Vercel (`vercel.json`, `engines.node >= 24`, variables documentadas) **sin desplegar**: la app sigue en GitHub Pages. |
 
 ## Consecuencias del prototipo local
 

@@ -158,3 +158,57 @@ integrarse más adelante como módulo de la suite todo-herramientas:
   navegador; la `service_role` nunca se usa en la app.
 - `npm run verificar:acceso` comprueba que sin la clave no se puede leer nada
   (usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` de `.env.local`).
+
+## Variables de entorno
+
+Todas son opcionales para desarrollar (ver `.env.example`; se copian a
+`.env.local`, que no se sube al repositorio).
+
+| Variable                         | Para qué                                                             |
+| -------------------------------- | -------------------------------------------------------------------- |
+| `CO_DB_RUTA`                     | Base local SQLite (por defecto `datos/operaciones.db`)               |
+| `CO_PUERTO_WEB`, `CO_PUERTO_API` | Puertos de la app y del servidor local (5173 y 5174)                 |
+| `CO_BASE`                        | Carpeta donde se publica (`/DailyGui/` en GitHub Pages; `/` si no)   |
+| `VITE_CO_BACKEND`                | `supabase` para que el build use Supabase (si no, el servidor local) |
+| `VITE_SUPABASE_URL`              | Dirección del proyecto de Supabase                                   |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`  | Clave **publicable** de Supabase (hecha para el navegador)           |
+
+Nunca se usa la clave `service_role` en la app.
+
+## Desplegar
+
+**Hoy:** GitHub Pages, automático en cada push a `main` (ver "App publicada").
+
+**Vercel (listo, sin desplegar):** cuando se decida, en Vercel se importa el
+repositorio y se configura:
+
+- Framework: Vite · Build: `npm run build` · Salida: `dist` · Node 24.
+- Variables: `VITE_CO_BACKEND=supabase`, `VITE_SUPABASE_URL` y
+  `VITE_SUPABASE_PUBLISHABLE_KEY` (las mismas del workflow de GitHub Pages).
+  `CO_BASE` no hace falta (la app queda en la raíz).
+- `vercel.json` ya indica todo eso y que `sw.js` no se guarde en caché.
+- El acceso sigue siendo por link secreto: el link nuevo es la dirección de
+  Vercel con el mismo `#acceso=…` (abrirlo una vez en cada dispositivo).
+
+## Respaldo
+
+Configuración › Respaldo › **Exportar respaldo** descarga un archivo
+`todocopias-respaldo-AAAA-MM-DD.json` con todas las tablas (personas, clientes,
+categorías, proyectos, tareas, responsables, subtareas, historial y
+configuración). Los PIN no se incluyen. Conviene guardarlo una vez por semana
+fuera de la PC (por ejemplo, en Drive).
+
+## Ícono de la app
+
+El ícono actual es **provisorio** (fondo de marca con los cuatro cuadrantes; no
+es el logo). Cuando esté el SVG blanco de TODOCOPIAS: reemplazar
+`public/iconos/icono.svg` y correr `node scripts/iconos.mjs` para regenerar los
+PNG.
+
+## Accesibilidad y rendimiento
+
+- `e2e/accesibilidad.spec.ts` revisa con axe la matriz, los formularios, el
+  detalle, Proyectos, Configuración e Historial: sin problemas serios ni
+  críticos (WCAG 2.1 AA).
+- Carga inicial: unos 100 kB de código comprimido más estilos y fuentes.
+  Proyectos, Historial, Mis tareas y Configuración se cargan recién al abrirlos.

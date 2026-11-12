@@ -4,18 +4,13 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
+      "runtimeArgs": ["run", "dev"],
       "port": 5173
     },
     {
       "name": "prueba",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "scripts/dev.mjs"
-      ],
+      "runtimeArgs": ["scripts/dev.mjs"],
       "port": 5190,
       "env": {
         "CO_PUERTO_WEB": "5190",
