@@ -21,6 +21,7 @@ import {
   cargarHechas,
   cargarPapelera,
   cargarPedidos,
+  cargarTareasDePedido,
 } from './consultas.ts'
 import type { BaseDeDatos } from './db.ts'
 import type { Pista } from './reglas.ts'
@@ -44,6 +45,7 @@ import {
   eliminarSubtarea,
   ErrorNoEncontrado,
   ErrorValidacion,
+  leerTarea,
   type Contexto,
 } from './servicio.ts'
 import {
@@ -73,6 +75,15 @@ const RUTAS: [string, string, Manejador][] = [
   ['GET', '/api/salud', () => ({ ok: true })],
   ['GET', '/api/matriz', ({ db }) => cargarMatriz(db)],
   ['GET', '/api/pedidos', ({ db }) => cargarPedidos(db)],
+  [
+    'GET',
+    '/api/pedidos/:id/tareas',
+    ({ db, params }) => {
+      const p = leerTarea(db, params.id!)
+      if (!p || p.tipo !== 'pedido') throw new ErrorNoEncontrado('La orden de trabajo no existe')
+      return cargarTareasDePedido(db, params.id!)
+    },
+  ],
   ['GET', '/api/catalogos', ({ db }) => cargarCatalogos(db)],
   ['GET', '/api/papelera', ({ db }) => cargarPapelera(db, diasPapelera(db))],
   [

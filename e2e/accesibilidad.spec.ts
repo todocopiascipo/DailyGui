@@ -74,4 +74,21 @@ test('matriz, alta, detalle y vistas sin problemas graves de accesibilidad', asy
     .click()
   await expect(page.getByRole('dialog', { name: 'Historial' })).toBeVisible()
   await revisar(page, '[role="dialog"]')
+  await page.keyboard.press('Escape')
+
+  // Fase 13: el espacio de órdenes de trabajo y una OT abierta.
+  const ot = unico('OT accesible')
+  const r = await page.request.post('/api/tareas', {
+    data: { tarea: { titulo: ot }, cliente: { nombre_apellido: 'Cliente' } },
+  })
+  const idOt = ((await r.json()) as { tarea: { id: string } }).tarea.id
+  await page.getByRole('tab', { name: 'Órdenes de trabajo' }).click()
+  const comanda = page.getByRole('button', { name: `Abrir la orden de trabajo ${ot}` })
+  await expect(comanda).toBeVisible()
+  await revisar(page)
+  await comanda.click()
+  await expect(page.getByRole('dialog', { name: ot })).toBeVisible()
+  await revisar(page, '[role="dialog"]')
+  await page.request.post(`/api/tareas/${idOt}/eliminar`)
+  await page.request.delete(`/api/tareas/${idOt}`)
 })

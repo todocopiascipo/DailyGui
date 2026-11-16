@@ -1,7 +1,9 @@
 import {
   CheckCheck,
   FileText,
+  ClipboardList,
   History,
+  LayoutGrid,
   ListTodo,
   Plus,
   Settings,
@@ -10,6 +12,8 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { BordeHerramientas, type Herramienta } from '../features/bordes/BordeHerramientas'
+import { DetalleOT } from '../features/ordenes/DetalleOT'
+import { Tender } from '../features/ordenes/Tender'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PanelHechas } from '../features/hechas/PanelHechas'
 import {
@@ -64,6 +68,8 @@ interface Creacion {
   formulario: 'rapida' | 'ot'
   inicial?: EstadoCreacion
   error?: string
+  /** Tarea nueva de una orden de trabajo (ya con su "Pedido relacionado"). */
+  pedidoId?: string
 }
 
 /** Aviso breve abajo; puede traer una acción ("Copiar mensaje"). */
@@ -112,6 +118,9 @@ export function PantallaPrincipal() {
   const [configurando, setConfigurando] = useState(false)
   const [viendoMisTareas, setViendoMisTareas] = useState(false)
   const [viendoHistorial, setViendoHistorial] = useState(false)
+  // Fase 13: la matriz (tareas) o el espacio de órdenes de trabajo.
+  const [vista, setVista] = useState<'tareas' | 'ordenes'>('tareas')
+  const [otAbierta, setOtAbierta] = useState<string | null>(null)
   const [senalHechas, setSenalHechas] = useState(0)
   const catalogos = useCatalogos()
   const quien = usePersonaActiva(catalogos.data?.personas)
@@ -132,6 +141,8 @@ export function PantallaPrincipal() {
     setViendoMisTareas(false)
     setViendoHistorial(false)
     setEligiendo(null)
+    setOtAbierta(null)
+    setVista('tareas')
   })
   useNotificaciones({
     activas: notificaciones,
@@ -147,7 +158,8 @@ export function PantallaPrincipal() {
     configurando ||
     eligiendo !== null ||
     viendoMisTareas ||
-    viendoHistorial
+    viendoHistorial ||
+    otAbierta !== null
 
   /**
    * Crear, terminar, entregar y eliminar quedan a nombre de alguien
@@ -157,8 +169,8 @@ export function PantallaPrincipal() {
     if (quien.identificado) accion()
     else setEligiendo({ motivo, despues: accion })
   }
-  const abrirAlta = (formulario: Creacion['formulario']) =>
-    conPersona('Para crear una tarea, elegí quién sos.', () => setCreando({ formulario }))
+  const abrirAlta = (formulario: Creacion['formulario'], pedidoId?: string) =>
+    conPersona('Para crear una tarea, elegí quién sos.', () => setCreando({ formulario, pedidoId }))
 
   // Los avisos se van solos.
   useEffect(() => {
@@ -263,6 +275,8 @@ export function PantallaPrincipal() {
       )
     }
     if (accion === 'entregar' && abierta === t.id) setAbierta(null)
+    // Entregada, la OT deja de estar colgada: se cierra su ventana.
+    if (accion === 'entregar' && otAbierta === t.id) setOtAbierta(null)
     cambiarEstado
       .mutateAsync({ id: t.id, cambio: accion, tipo: t.tipo })
       .then(() => {
@@ -369,6 +383,7 @@ export function PantallaPrincipal() {
     error: creando?.error,
     onGuardar: guardarNueva,
     onCerrar: () => setCreando(null),
+    pedidoId: creando?.pedidoId,
   }
   // Menú del borde (especificación 7.10): todo a mano, en un solo lugar.
   const herramientas: Herramienta[] = [
@@ -397,6 +412,19 @@ export function PantallaPrincipal() {
           },
         ]
       : []),
+    vista === 'tareas'
+      ? {
+          id: 'ordenes',
+          texto: 'Órdenes de trabajo',
+          icono: ClipboardList,
+          hacer: () => setVista('ordenes'),
+        }
+      : {
+          id: 'tareas',
+          texto: 'Tareas (matriz)',
+          icono: LayoutGrid,
+          hacer: () => setVista('tareas'),
+        },
     {
       id: 'hechas',
       texto: 'Hechas hoy',
@@ -431,12 +459,17 @@ export function PantallaPrincipal() {
             data-cursor-oculto={cursorOculto || undefined}
           >
             <ProveedorArrastre onSoltar={soltar}>
-              <Matriz
-                tareas={tareas}
-                config={matriz.data.config}
-                ahora={ahora}
-                onAbrir={setAbierta}
-              />
+              <SelectorVista vista={vista} onCambiar={setVista} />
+              {vista === 'tareas' ? (
+                <Matriz
+                  tareas={tareas}
+                  config={matriz.data.config}
+                  ahora={ahora}
+                  onAbrir={setAbierta}
+                />
+              ) : (
+                <Tender ahora={ahora} onAbrir={setOtAbierta} />
+              )}
               <Controles
                 onCrear={() => abrirAlta('rapida')}
                 onCrearOT={() => abrirAlta('ot')}
@@ -490,6 +523,16 @@ export function PantallaPrincipal() {
                 onCerrar={() => setViendoMisTareas(false)}
               />
             </Suspense>
+          )}
+          {otAbierta && (
+            <DetalleOT
+              key={otAbierta}
+              id={otAbierta}
+              ahora={ahora}
+              onCerrar={() => setOtAbierta(null)}
+              onAbrirTarea={setAbierta}
+              onNuevaTarea={(id) => abrirAlta('rapida', id)}
+            />
           )}
           {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
           {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
@@ -604,6 +647,37 @@ function Controles({
         <Settings size={18} aria-hidden strokeWidth={1.75} />
       </button>
     </>
+  )
+}
+
+/** Arriba al centro: Tareas (la matriz) u Órdenes de trabajo (Fase 13). */
+function SelectorVista({
+  vista,
+  onCambiar,
+}: {
+  vista: 'tareas' | 'ordenes'
+  onCambiar: (v: 'tareas' | 'ordenes') => void
+}) {
+  return (
+    <div className="co-selector-vista" role="tablist" aria-label="Qué ver">
+      {(
+        [
+          ['tareas', 'Tareas'],
+          ['ordenes', 'Órdenes de trabajo'],
+        ] as const
+      ).map(([v, texto]) => (
+        <button
+          key={v}
+          type="button"
+          role="tab"
+          aria-selected={vista === v}
+          className="co-selector-vista__opcion"
+          onClick={() => onCambiar(v)}
+        >
+          {texto}
+        </button>
+      ))}
+    </div>
   )
 }
 

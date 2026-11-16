@@ -32,6 +32,7 @@ function useAlGuardar() {
   return (d: DetalleTarea) => {
     qc.setQueryData(['tarea', d.tarea.id], d)
     void qc.invalidateQueries({ queryKey: ['pedidos'] })
+    void qc.invalidateQueries({ queryKey: ['pedido-tareas'] })
     return qc.invalidateQueries({ queryKey: ['matriz'] })
   }
 }

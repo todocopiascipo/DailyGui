@@ -36,6 +36,7 @@ function aplicarAviso(qc: QueryClient, aviso: Aviso) {
     void qc.invalidateQueries({ queryKey: ['hechas'] })
     void qc.invalidateQueries({ queryKey: ['mis-tareas'] })
     void qc.invalidateQueries({ queryKey: ['pedidos'] })
+    void qc.invalidateQueries({ queryKey: ['pedido-tareas'] })
   }
   if (aviso.recursos.includes('configuracion')) {
     void qc.invalidateQueries({ queryKey: ['matriz'] })

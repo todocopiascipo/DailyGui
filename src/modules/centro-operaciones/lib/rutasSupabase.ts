@@ -64,6 +64,10 @@ export function rutaARpc(
     }
   }
 
+  if (a === 'pedidos' && m === 'GET' && partes.length === 3 && b === 'tareas') {
+    return rpc('co_pedido_tareas', { p_id: id })
+  }
+
   if (a === 'categorias') {
     if (m === 'POST' && partes.length === 1) return rpc('co_crear_categoria', { p: cuerpo ?? {} })
     if (m === 'PUT' && id === 'orden' && !b) {

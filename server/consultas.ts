@@ -70,6 +70,26 @@ export function cargarPedidos(db: BaseDeDatos): TareaMatriz[] {
        ORDER BY t.fecha_entrega IS NULL, t.fecha_entrega, t.created_at`,
     )
     .all() as Record<string, unknown>[]
+  // Avance de cada OT: sus tareas (las que la tienen como "pedido relacionado").
+  const avance = db.prepare(
+    `SELECT count(*) AS total, coalesce(sum(estado = 'terminada'), 0) AS hechas
+     FROM tareas WHERE pedido_id = ? AND eliminada_at IS NULL AND estado <> 'cancelada'`,
+  )
+  return aTarjetas(db, filas).map((t) => {
+    const a = avance.get(t.id) as { total: number; hechas: number }
+    return { ...t, tareas_ot: { total: Number(a.total), hechas: Number(a.hechas) } }
+  })
+}
+
+/** Las tareas de una orden de trabajo (Fase 13), terminadas incluidas. */
+export function cargarTareasDePedido(db: BaseDeDatos, pedidoId: string): TareaMatriz[] {
+  const filas = db
+    .prepare(
+      `SELECT ${COLUMNAS_TARJETA}
+       WHERE t.pedido_id = ? AND t.eliminada_at IS NULL AND t.tipo = 'interna'
+       ORDER BY t.created_at`,
+    )
+    .all(pedidoId) as Record<string, unknown>[]
   return aTarjetas(db, filas)
 }
 

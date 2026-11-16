@@ -38,7 +38,7 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 
 ## Estado (al 2026-11-12)
 
-Hechas: Fases 0–12 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
+Hechas: Fases 0–13 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
 matriz, crear/editar, tiempo real, arrastrar y soltar con tacho y papelera,
 OT con forma de la de papel, terminar/entregar/devolver, "Hechas hoy",
 "Copiar mensaje", "¿Quién soy?" con PIN, "Mis tareas"; "+" = tareas internas
@@ -60,9 +60,11 @@ README completo, listo para Vercel sin desplegar.
   la urgencia NO cambia sola con la fecha); orden dentro del cuadrante por suma;
   sin proyectos (tabla conservada); OT sin importancia/urgencia; `/pedidos`
   lista las OT abiertas.
-- **Fase 13:** espacio "Órdenes de trabajo" (estilo comandas colgadas; al tocar
-  una, la OT completa a la izquierda y sus tareas a la derecha, con agregar
-  tareas). Sale del tender al marcarla Entregada.
+- **Fase 13 (hecha):** espacio "Órdenes de trabajo" (selector arriba al centro;
+  comandas colgadas en `features/ordenes/Tender.tsx`; OT abierta en
+  `DetalleOT.tsx` con la ficha a la izquierda y sus tareas a la derecha).
+  `/pedidos` trae el avance (`tareas_ot`) y `/pedidos/:id/tareas` sus tareas.
+  Sale del tender al marcarla Entregada.
 - **Fase 14:** tareas encadenadas en columnas (1.º orden = sin dependencias); se
   enlazan manteniendo una sobre otra (barra de ~2 s); una tarea puede esperar a
   varias; en la matriz se ven atenuadas con "espera a…" hasta que se termine la

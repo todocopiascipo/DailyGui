@@ -40,21 +40,27 @@ interface Props {
   /** Al reabrir después de un rechazo: lo que se había cargado y el motivo. */
   inicial?: EstadoCreacion
   error?: string
+  /** Creada desde una orden de trabajo: ya viene con ese pedido relacionado. */
+  pedidoId?: string
 }
 
 /** Tarea nueva desde "+": siempre interna (los pedidos se cargan con la OT). */
-const tareaVacia = (): Borrador => ({ ...borradorVacio(), tipo: 'interna' })
+const tareaVacia = (pedidoId = ''): Borrador => ({
+  ...borradorVacio(),
+  tipo: 'interna',
+  pedido_id: pedidoId,
+})
 
 /**
  * Tarea interna ("+", especificación 7.5): lo esencial en un paso (título,
  * responsables, entrega, importancia y urgencia de 0 a 10), su categoría y, si es para
  * un pedido, la orden de trabajo ya cargada. El resto, en "Más datos".
  */
-export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: Props) {
+export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, pedidoId }: Props) {
   const idForm = useId()
   const catalogos = useCatalogos()
   const conectado = useConectado()
-  const [vacia] = useState(tareaVacia)
+  const [vacia] = useState(() => tareaVacia(pedidoId))
   const [b, setB] = useState<Borrador>(() => inicial?.b ?? vacia)
   const [subtareas, setSubtareas] = useState<SubtareaNueva[]>(() => inicial?.subtareas ?? [])
   const [mas, setMas] = useState(() => (inicial?.subtareas.length ?? 0) > 0)

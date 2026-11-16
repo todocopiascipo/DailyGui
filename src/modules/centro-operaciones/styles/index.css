@@ -22,6 +22,7 @@
 @import './persona.css';
 @import './proyectos.css';
 @import './herramientas.css';
+@import './ordenes.css';
 
 /*
  * Conecta los tokens de marca con las utilidades de Tailwind.

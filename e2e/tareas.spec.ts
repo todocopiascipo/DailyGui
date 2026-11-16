@@ -92,6 +92,11 @@ test('dentro del cuadrante, primero la mayor suma de importancia y urgencia', as
   await crearPorApi(page, { titulo: baja, nivel_importancia: 6, nivel_urgencia: 6 })
   await crearPorApi(page, { titulo: alta, nivel_importancia: 10, nivel_urgencia: 9 })
   await page.reload()
+  // Ampliado se ven todas (con muchas, las demás pruebas llenan el cuadrante y van a "+N").
+  await cuadrante(page, 'hacer')
+    .getByRole('button', { name: /^Importante y urgente/ })
+    .click()
+  await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()
   const titulos = await cuadrante(page, 'hacer')
     .getByRole('heading', { level: 3 })
     .allTextContents()

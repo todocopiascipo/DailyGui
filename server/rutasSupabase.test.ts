@@ -10,6 +10,7 @@ describe('rutas → funciones de Supabase', () => {
     ['GET', '/catalogos', undefined, 'co_catalogos', {}],
     ['GET', '/papelera', undefined, 'co_papelera', {}],
     ['GET', '/pedidos', undefined, 'co_pedidos', {}],
+    ['GET', `/pedidos/${ID}/tareas`, undefined, 'co_pedido_tareas', { p_id: ID }],
     ['GET', '/clientes?telefono=2994', undefined, 'co_clientes', { p_telefono: '2994' }],
     [
       'GET',

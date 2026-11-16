@@ -39,6 +39,8 @@ function useRecargar() {
     void qc.invalidateQueries({ queryKey: ['tarea', id] })
     void qc.invalidateQueries({ queryKey: ['papelera'] })
     void qc.invalidateQueries({ queryKey: ['mis-tareas'] })
+    void qc.invalidateQueries({ queryKey: ['pedidos'] })
+    void qc.invalidateQueries({ queryKey: ['pedido-tareas'] })
   }
 }
 

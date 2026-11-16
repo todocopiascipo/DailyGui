@@ -39,9 +39,14 @@ En la matriz (solo tareas; las órdenes de trabajo van aparte):
   arriba las de mayor importancia + urgencia.
 - **Orden de trabajo (pedido):** tecla `O` o el botón `OT`, al lado del `+`.
   Tiene la forma de la OT de papel (sin importancia ni urgencia); la primera
-  línea del detalle es el título y las fechas van al final. No aparece en la
-  matriz: su espacio propio llega en la Fase 13 (mientras tanto, se abre desde
-  "Hechas hoy", el Historial o la tarea relacionada).
+  línea del detalle es el título y las fechas van al final.
+- **Órdenes de trabajo (espacio propio):** el selector de arriba al centro
+  cambia entre "Tareas" (la matriz) y "Órdenes de trabajo": las OT abiertas
+  colgadas como comandas (detalle, nombre, entrega, debe y avance de sus
+  tareas). Tocar una la abre: a la izquierda la OT completa, a la derecha sus
+  tareas (tocar una abre su detalle) y "Nueva tarea" (ya relacionada con esa
+  OT). Arriba: Terminar, Entregada, Devolver, Copiar mensaje, Copiar teléfono y
+  Editar. Al marcarla Entregada deja de estar colgada.
 - **Mover de cuadrante:** arrastrar el globo (en el iPad, mantener presionado y
   arrastrar). Cada nivel se ajusta lo mínimo para quedar del lado correcto (por
   ejemplo, urgencia 3 → 6). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
@@ -105,7 +110,7 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
-  `GET /api/hechas?desde=`, `GET /api/pedidos` (órdenes de trabajo abiertas),
+  `GET /api/hechas?desde=`, `GET /api/pedidos` (órdenes de trabajo abiertas, con avance), `GET /api/pedidos/:id/tareas`,
   `GET /api/personas`, `PATCH /api/personas/:id`, `PUT /api/personas/orden`,
   `GET|POST /api/categorias`, `PATCH /api/categorias/:id`,
   `PUT /api/categorias/orden`, `GET /api/historial?persona=&tarea=&desde=&hasta=&texto=&antes=`,

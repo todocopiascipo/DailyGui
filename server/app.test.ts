@@ -739,6 +739,46 @@ describe('API de edición', () => {
     expect(e.cuerpo.tarea.pedido_id).toBeNull()
   })
 
+  it('órdenes de trabajo (Fase 13): avance y sus tareas', async () => {
+    const ot = (
+      await api('POST', '/tareas', {
+        tarea: { titulo: 'Vidriera' },
+        cliente: { nombre_apellido: 'Cliente OT' },
+      })
+    ).cuerpo.tarea.id as string
+    const crear = async (titulo: string) =>
+      (
+        await api('POST', '/tareas', {
+          tarea: { titulo, nivel_importancia: 7, nivel_urgencia: 7, pedido_id: ot },
+        })
+      ).cuerpo.tarea.id as string
+    const a = await crear('Medir')
+    await crear('Imprimir vinilo')
+    await api('POST', `/tareas/${a}/terminar`)
+    // Una tarea suelta (de mantenimiento) no cuenta.
+    await api('POST', '/tareas', { tarea: { titulo: 'Suelta', nivel_importancia: 2 } })
+
+    const lista = (await api('GET', '/pedidos')).cuerpo as {
+      id: string
+      tareas_ot: { total: number; hechas: number }
+    }[]
+    expect(lista.find((p) => p.id === ot)!.tareas_ot).toEqual({ total: 2, hechas: 1 })
+    const tareas = (await api('GET', `/pedidos/${ot}/tareas`)).cuerpo as {
+      titulo: string
+      estado: string
+    }[]
+    expect(tareas.map((t) => [t.titulo, t.estado])).toEqual([
+      ['Medir', 'terminada'],
+      ['Imprimir vinilo', 'pendiente'],
+    ])
+    expect((await api('GET', `/pedidos/${a}/tareas`)).estado).toBe(404)
+    // Entregada, sale de la lista ("deja de estar colgada").
+    await api('POST', `/tareas/${ot}/terminar`)
+    await api('POST', `/tareas/${ot}/entregar`)
+    const despues = (await api('GET', '/pedidos')).cuerpo as { id: string }[]
+    expect(despues.some((p) => p.id === ot)).toBe(false)
+  })
+
   it('rechaza datos inválidos sin guardar nada', async () => {
     const casos = [
       { tarea: { titulo: '', importante: true } },

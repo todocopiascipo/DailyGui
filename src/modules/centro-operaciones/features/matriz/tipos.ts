@@ -31,6 +31,8 @@ export interface TareaMatriz {
   cliente: { nombre: string; telefono: string | null } | null
   /** Tarea interna relacionada con un pedido (orden de trabajo). */
   pedido?: { id: string; titulo: string } | null
+  /** Solo en la lista de OT: avance de sus tareas. */
+  tareas_ot?: { total: number; hechas: number }
   /** Importancia y urgencia de 0 a 10 (de 6 a 10 = "sí"). */
   nivel_importancia: number
   nivel_urgencia: number
