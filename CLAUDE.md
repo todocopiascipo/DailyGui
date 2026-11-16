@@ -38,7 +38,7 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 
 ## Estado (al 2026-11-12)
 
-Hechas: Fases 0–13 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
+Hechas: Fases 0–14 (incluido el rediseño 12-14) y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
 matriz, crear/editar, tiempo real, arrastrar y soltar con tacho y papelera,
 OT con forma de la de papel, terminar/entregar/devolver, "Hechas hoy",
 "Copiar mensaje", "¿Quién soy?" con PIN, "Mis tareas"; "+" = tareas internas
@@ -64,11 +64,13 @@ README completo, listo para Vercel sin desplegar.
   comandas colgadas en `features/ordenes/Tender.tsx`; OT abierta en
   `DetalleOT.tsx` con la ficha a la izquierda y sus tareas a la derecha).
   `/pedidos` trae el avance (`tareas_ot`) y `/pedidos/:id/tareas` sus tareas.
+  El selector Tareas / Órdenes está abajo, junto al "+".
   Sale del tender al marcarla Entregada.
-- **Fase 14:** tareas encadenadas en columnas (1.º orden = sin dependencias); se
-  enlazan manteniendo una sobre otra (barra de ~2 s); una tarea puede esperar a
-  varias; en la matriz se ven atenuadas con "espera a…" hasta que se termine la
-  anterior.
+- **Fase 14 (hecha):** tareas encadenadas (`tarea_dependencias`; reglas en
+  `enlazarTareas` y `co_enlazar_tareas`: misma OT, sin círculos). Diagrama en
+  `features/ordenes/FlujoTareas.tsx` (columnas con `lib/flujo.ts`, flechas SVG,
+  enlace manteniendo una tarea encima de otra 2 s); "Espera a" en el detalle
+  (`features/tarea/EsperaA.tsx`); en la matriz, atenuada con `filter`.
 
 Esperar la aprobación del usuario antes de cada fase. Lo "posterior" de la
 especificación (Vercel, Web Push, roles, etc.) solo con pedido explícito.

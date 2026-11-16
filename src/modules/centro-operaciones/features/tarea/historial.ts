@@ -104,6 +104,14 @@ export function describirEvento(e: EventoDetalle): string {
     case 'subtarea_eliminada':
       return `Quitó la subtarea ${sub}`
     case 'editada': {
+      // Fase 14: tareas encadenadas.
+      const espera = cambio(e, 'espera_a')
+      if (espera) {
+        const despues = Array.isArray(espera.despues) ? (espera.despues as string[]) : []
+        return despues.length > 0
+          ? `Ahora espera a: ${despues.join(', ')}`
+          : 'Ya no espera a ninguna tarea'
+      }
       const campos = [
         ...new Set(
           // `titulo` suelto es solo referencia; los cambios traen { antes, despues }.

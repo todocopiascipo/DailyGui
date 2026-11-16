@@ -9,6 +9,13 @@ export interface PersonaBreve {
   tiene_pin?: boolean
 }
 
+/** Una tarea de la que depende otra (Fase 14). `hecha` = ya terminada. */
+export interface Dependencia {
+  id: string
+  titulo: string
+  hecha: boolean
+}
+
 /** Lo que la matriz necesita de cada tarea. */
 export interface TareaMatriz {
   id: string
@@ -31,6 +38,8 @@ export interface TareaMatriz {
   cliente: { nombre: string; telefono: string | null } | null
   /** Tarea interna relacionada con un pedido (orden de trabajo). */
   pedido?: { id: string; titulo: string } | null
+  /** Tareas a las que espera (de la misma OT). */
+  depende_de?: Dependencia[]
   /** Solo en la lista de OT: avance de sus tareas. */
   tareas_ot?: { total: number; hechas: number }
   /** Importancia y urgencia de 0 a 10 (de 6 a 10 = "sí"). */

@@ -10,6 +10,7 @@ import type {
   EventoDetalle,
 } from '../src/modules/centro-operaciones/features/tarea/tipos.ts'
 import type { TareaMia } from '../src/modules/centro-operaciones/features/mis-tareas/tipos.ts'
+import type { Dependencia } from '../src/modules/centro-operaciones/features/matriz/tipos.ts'
 import type { BaseDeDatos } from './db.ts'
 import { aSubtarea, leerTarea } from './servicio.ts'
 
@@ -121,7 +122,30 @@ export function cargarHechas(db: BaseDeDatos, desde: string): RespuestaHechas {
 }
 
 /** Filas de tareas → tarjetas, con sus responsables. */
+/** De qué tareas depende cada una (Fase 14), sin las que están en la papelera. */
+export function dependenciasDe(db: BaseDeDatos): Map<string, Dependencia[]> {
+  const mapa = new Map<string, Dependencia[]>()
+  const filas = db
+    .prepare(
+      `SELECT d.tarea_id, x.id, x.titulo, x.estado FROM tarea_dependencias d
+       JOIN tareas x ON x.id = d.depende_de_id
+       WHERE x.eliminada_at IS NULL ORDER BY x.created_at`,
+    )
+    .all() as { tarea_id: string; id: string; titulo: string; estado: string }[]
+  for (const f of filas) {
+    const lista = mapa.get(f.tarea_id) ?? []
+    lista.push({
+      id: f.id,
+      titulo: f.titulo,
+      hecha: f.estado === 'terminada' || f.estado === 'entregada',
+    })
+    mapa.set(f.tarea_id, lista)
+  }
+  return mapa
+}
+
 function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatriz[] {
+  const dependencias = dependenciasDe(db)
   const responsables = new Map<string, PersonaBreve[]>()
   const filasResp = db
     .prepare(
@@ -160,6 +184,7 @@ function aTarjetas(db: BaseDeDatos, filas: Record<string, unknown>[]): TareaMatr
     nivel_urgencia: Number(f.nivel_urgencia),
     responsables: responsables.get(String(f.id)) ?? [],
     subtareas: { total: Number(f.sub_total), hechas: Number(f.sub_hechas) },
+    depende_de: dependencias.get(String(f.id)) ?? [],
   }))
 }
 
@@ -248,7 +273,8 @@ export function cargarDetalle(db: BaseDeDatos, id: string): DetalleTarea | null 
     ? ((db.prepare('SELECT id, titulo FROM tareas WHERE id = ?').get(tarea.pedido_id) as unknown as
         { id: string; titulo: string } | undefined) ?? null)
     : null
-  return { tarea, responsables, subtareas, cliente, creada_por, eventos, pedido }
+  const depende_de = dependenciasDe(db).get(id) ?? []
+  return { tarea, responsables, subtareas, cliente, creada_por, eventos, pedido, depende_de }
 }
 
 export interface TareaPapelera {

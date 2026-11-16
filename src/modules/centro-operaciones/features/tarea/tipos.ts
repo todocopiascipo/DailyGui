@@ -1,5 +1,5 @@
 import type { Enums, Tables } from '../../lib/database.types'
-import type { PersonaBreve } from '../matriz/tipos'
+import type { Dependencia, PersonaBreve } from '../matriz/tipos'
 
 export type Tarea = Tables<'tareas'>
 
@@ -46,4 +46,6 @@ export interface DetalleTarea {
   eventos: EventoDetalle[]
   /** Pedido relacionado (si es una tarea interna enlazada a una OT). */
   pedido?: { id: string; titulo: string } | null
+  /** Tareas a las que espera (Fase 14). */
+  depende_de?: Dependencia[]
 }

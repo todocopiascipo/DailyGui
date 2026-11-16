@@ -25,6 +25,7 @@ import { useCatalogos, useDetalle, useEditarTarea } from './datos'
 import { Dialogo } from './Dialogo'
 import { describirEvento, momentoEvento, NOMBRES_ESTADO, NOMBRES_MOTIVO } from './historial'
 import { SelectorCategoria } from './SelectorCategoria'
+import { EsperaA } from './EsperaA'
 import { SelectorPedido } from './SelectorPedido'
 import { Subtareas } from './Subtareas'
 import type { DetalleTarea as Detalle } from './tipos'
@@ -400,6 +401,8 @@ function Editor({
                 <Link2 size={14} aria-hidden /> Abrir el pedido "{detalle.pedido.titulo}"
               </button>
             )}
+            {/* Fase 14: tareas encadenadas dentro de la misma orden de trabajo. */}
+            {t.pedido_id && <EsperaA detalle={detalle} />}
           </div>
         )}
 

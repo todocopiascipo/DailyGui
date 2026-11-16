@@ -459,7 +459,6 @@ export function PantallaPrincipal() {
             data-cursor-oculto={cursorOculto || undefined}
           >
             <ProveedorArrastre onSoltar={soltar}>
-              <SelectorVista vista={vista} onCambiar={setVista} />
               {vista === 'tareas' ? (
                 <Matriz
                   tareas={tareas}
@@ -471,6 +470,8 @@ export function PantallaPrincipal() {
                 <Tender ahora={ahora} onAbrir={setOtAbierta} />
               )}
               <Controles
+                vista={vista}
+                onVista={setVista}
                 onCrear={() => abrirAlta('rapida')}
                 onCrearOT={() => abrirAlta('ot')}
                 onConfigurar={() => setConfigurando(true)}
@@ -596,10 +597,14 @@ export function PantallaPrincipal() {
  * arrastra un globo, en su lugar aparece el tacho (especificación 6.5).
  */
 function Controles({
+  vista,
+  onVista,
   onCrear,
   onCrearOT,
   onConfigurar,
 }: {
+  vista: 'tareas' | 'ordenes'
+  onVista: (v: 'tareas' | 'ordenes') => void
   onCrear: () => void
   onCrearOT: () => void
   onConfigurar: () => void
@@ -617,6 +622,7 @@ function Controles({
   return (
     <>
       <div className="co-crear">
+        <SelectorVista vista={vista} onCambiar={onVista} />
         <button
           type="button"
           className="co-boton-crear"
@@ -650,7 +656,7 @@ function Controles({
   )
 }
 
-/** Arriba al centro: Tareas (la matriz) u Órdenes de trabajo (Fase 13). */
+/** Abajo al centro, junto al "+": Tareas (la matriz) u Órdenes de trabajo (Fase 13). */
 function SelectorVista({
   vista,
   onCambiar,

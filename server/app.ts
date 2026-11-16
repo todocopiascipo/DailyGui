@@ -46,6 +46,8 @@ import {
   ErrorNoEncontrado,
   ErrorValidacion,
   leerTarea,
+  enlazarTareas,
+  desenlazarTareas,
   type Contexto,
 } from './servicio.ts'
 import {
@@ -75,6 +77,30 @@ const RUTAS: [string, string, Manejador][] = [
   ['GET', '/api/salud', () => ({ ok: true })],
   ['GET', '/api/matriz', ({ db }) => cargarMatriz(db)],
   ['GET', '/api/pedidos', ({ db }) => cargarPedidos(db)],
+  [
+    'POST',
+    '/api/tareas/:id/dependencias',
+    ({ db, ctx, params, cuerpo }) => {
+      const o = (typeof cuerpo === 'object' && cuerpo !== null ? cuerpo : {}) as Record<
+        string,
+        unknown
+      >
+      const otra = o.depende_de_id
+      if (typeof otra !== 'string' || !/^[0-9a-f-]{36}$/i.test(otra)) {
+        throw new ErrorValidacion('Elegí la tarea de la que depende')
+      }
+      enlazarTareas(db, ctx, params.id!, otra)
+      return cargarDetalle(db, params.id!)
+    },
+  ],
+  [
+    'DELETE',
+    '/api/tareas/:id/dependencias/:otra',
+    ({ db, ctx, params }) => {
+      desenlazarTareas(db, ctx, params.id!, params.otra!)
+      return cargarDetalle(db, params.id!)
+    },
+  ],
   [
     'GET',
     '/api/pedidos/:id/tareas',

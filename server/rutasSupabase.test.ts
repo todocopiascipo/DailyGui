@@ -11,6 +11,20 @@ describe('rutas → funciones de Supabase', () => {
     ['GET', '/papelera', undefined, 'co_papelera', {}],
     ['GET', '/pedidos', undefined, 'co_pedidos', {}],
     ['GET', `/pedidos/${ID}/tareas`, undefined, 'co_pedido_tareas', { p_id: ID }],
+    [
+      'POST',
+      `/tareas/${ID}/dependencias`,
+      { depende_de_id: ID },
+      'co_enlazar_tareas',
+      { p_id: ID, p: { depende_de_id: ID } },
+    ],
+    [
+      'DELETE',
+      `/tareas/${ID}/dependencias/${ID}`,
+      undefined,
+      'co_desenlazar_tareas',
+      { p_id: ID, p_otra: ID },
+    ],
     ['GET', '/clientes?telefono=2994', undefined, 'co_clientes', { p_telefono: '2994' }],
     [
       'GET',

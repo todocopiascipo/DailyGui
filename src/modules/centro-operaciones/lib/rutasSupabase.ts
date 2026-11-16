@@ -87,6 +87,12 @@ export function rutaARpc(
       }
       if (m === 'DELETE') return rpc('co_borrar_definitiva', { p_id: id })
     }
+    if (partes.length === 3 && m === 'POST' && b === 'dependencias') {
+      return rpc('co_enlazar_tareas', { p_id: id, p: cuerpo ?? {} })
+    }
+    if (partes.length === 4 && m === 'DELETE' && b === 'dependencias') {
+      return rpc('co_desenlazar_tareas', { p_id: id, p_otra: c })
+    }
     if (partes.length === 3 && m === 'POST') {
       if (b === 'subtareas') return rpc('co_crear_subtarea', { p_tarea: id, p: cuerpo ?? {} })
       if (b && ACCIONES.includes(b)) return rpc('co_tarea_accion', { p_id: id, p_accion: b })

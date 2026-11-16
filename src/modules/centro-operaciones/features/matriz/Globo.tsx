@@ -1,5 +1,6 @@
 import { Check, FolderKanban, Link2, ListChecks, Pause, Skull } from 'lucide-react'
 import type { Enums } from '../../lib/database.types'
+import { esperaA } from '../../lib/flujo'
 import { textoEntrega } from '../../lib/tiempo'
 import type { Aspecto } from '../../lib/urgencia'
 import { usePersona } from '../persona/persona'
@@ -31,6 +32,9 @@ function textoResponsables(tarea: TareaMatriz, densidad: Densidad): string {
 
 function lineaEstado(tarea: TareaMatriz, aspecto: Aspecto, ahora: Date): string | null {
   if (aspecto === 'terminada') return 'Terminada'
+  // Fase 14: si espera a otra tarea (y no está vencida), eso es lo que se ve.
+  const faltan = esperaA(tarea)
+  if (faltan.length > 0 && aspecto !== 'vencida') return `Espera a: ${faltan.join(', ')}`
   const entrega = tarea.fecha_entrega ? new Date(tarea.fecha_entrega) : null
   const textoFecha = entrega ? textoEntrega(entrega, ahora) : null
   if (tarea.estado === 'en_espera' && tarea.motivo_espera) {
@@ -75,6 +79,7 @@ export function Globo({ tarea, aspecto, ahora, densidad, onAbrir }: Props) {
       data-tarea-id={tarea.id}
       className={`co-globo co-globo--${aspecto} co-globo--${densidad}${tarea.provisoria ? ' co-globo--provisoria' : ''}${arrastrable ? ' co-globo--arrastrable' : ''}`}
       data-aspecto={aspecto}
+      data-espera={esperaA(tarea).length > 0 || undefined}
       data-testid="co-globo"
       data-arrastrando={arrastre?.levantado?.id === tarea.id || undefined}
       data-propia={(resaltar && propia) || undefined}

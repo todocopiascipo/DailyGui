@@ -707,5 +707,117 @@ export function cambiarPin(
   )
 }
 
+// ---------------------------------------------------------------------------
+// Tareas encadenadas (Fase 14): una tarea espera a otras de la misma OT.
+// ---------------------------------------------------------------------------
+
+function nombresDependencias(db: BaseDeDatos, tareaId: string): string[] {
+  return (
+    db
+      .prepare(
+        `SELECT x.titulo FROM tarea_dependencias d JOIN tareas x ON x.id = d.depende_de_id
+         WHERE d.tarea_id = ? ORDER BY x.titulo`,
+      )
+      .all(tareaId) as { titulo: string }[]
+  ).map((f) => f.titulo)
+}
+
+/** ¿`desde` depende (directa o indirectamente) de `buscada`? */
+function dependeDe(db: BaseDeDatos, desde: string, buscada: string): boolean {
+  const pendientes = [desde]
+  const vistas = new Set<string>()
+  const leer = db.prepare('SELECT depende_de_id FROM tarea_dependencias WHERE tarea_id = ?')
+  while (pendientes.length > 0) {
+    const actual = pendientes.pop()!
+    if (actual === buscada) return true
+    if (vistas.has(actual)) continue
+    vistas.add(actual)
+    for (const f of leer.all(actual) as { depende_de_id: string }[])
+      pendientes.push(f.depende_de_id)
+  }
+  return false
+}
+
+function registrarEnlace(
+  db: BaseDeDatos,
+  tarea: Tarea,
+  persona: string | null,
+  antes: string[],
+  ahora: string,
+) {
+  const despues = nombresDependencias(db, tarea.id)
+  if (JSON.stringify(antes) === JSON.stringify(despues)) return
+  registrar(
+    db,
+    {
+      accion: 'editada',
+      tarea_id: tarea.id,
+      proyecto_id: null,
+      persona_id: persona,
+      cambios: { espera_a: { antes, despues }, titulo: tarea.titulo },
+    },
+    ahora,
+  )
+}
+
+/**
+ * `tareaId` pasa a esperar a `dependeDeId`. Las dos tienen que ser tareas de la
+ * misma orden de trabajo, y no se puede armar un círculo.
+ */
+export function enlazarTareas(
+  db: BaseDeDatos,
+  ctx: Contexto,
+  tareaId: string,
+  dependeDeId: string,
+): void {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  enTransaccion(db, () => {
+    const t = leerTarea(db, tareaId)
+    const d = leerTarea(db, dependeDeId)
+    if (!t || t.eliminada_at) throw new ErrorNoEncontrado('La tarea no existe')
+    if (!d || d.eliminada_at) throw new ErrorNoEncontrado('La tarea de la que depende no existe')
+    if (t.id === d.id) throw new ErrorValidacion('Una tarea no puede esperarse a sí misma')
+    if (
+      t.tipo !== 'interna' ||
+      d.tipo !== 'interna' ||
+      !t.pedido_id ||
+      t.pedido_id !== d.pedido_id
+    ) {
+      throw new ErrorValidacion('Solo se encadenan tareas de la misma orden de trabajo')
+    }
+    if (dependeDe(db, d.id, t.id)) {
+      throw new ErrorValidacion(
+        `"${d.titulo}" ya espera a "${t.titulo}": no se puede armar un círculo`,
+      )
+    }
+    const persona = personaValida(db, ctx.persona)
+    const antes = nombresDependencias(db, t.id)
+    db.prepare(
+      'INSERT OR IGNORE INTO tarea_dependencias (tarea_id, depende_de_id, created_at) VALUES (?, ?, ?)',
+    ).run(t.id, d.id, ahora)
+    registrarEnlace(db, t, persona, antes, ahora)
+  })
+}
+
+export function desenlazarTareas(
+  db: BaseDeDatos,
+  ctx: Contexto,
+  tareaId: string,
+  dependeDeId: string,
+): void {
+  const ahora = ctx.ahora ?? new Date().toISOString()
+  enTransaccion(db, () => {
+    const t = leerTarea(db, tareaId)
+    if (!t) throw new ErrorNoEncontrado('La tarea no existe')
+    const persona = personaValida(db, ctx.persona)
+    const antes = nombresDependencias(db, t.id)
+    db.prepare('DELETE FROM tarea_dependencias WHERE tarea_id = ? AND depende_de_id = ?').run(
+      t.id,
+      dependeDeId,
+    )
+    registrarEnlace(db, t, persona, antes, ahora)
+  })
+}
+
 export class ErrorNoEncontrado extends Error {}
 export class ErrorValidacion extends Error {}

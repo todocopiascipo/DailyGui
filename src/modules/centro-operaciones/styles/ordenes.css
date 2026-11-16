@@ -2,18 +2,14 @@
  * Fase 13: espacio "Órdenes de trabajo" (comandas colgadas) y OT abierta.
  * ========================================================================== */
 
-/* Selector Tareas / Órdenes de trabajo, arriba al centro. */
+/* Selector Tareas / Órdenes de trabajo, abajo al centro junto al "+". */
 .co-selector-vista {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  z-index: 15;
   display: flex;
+  align-self: center;
   padding: 3px;
   border: 1px solid rgb(255 255 255 / 0.22);
   border-radius: var(--co-radius-pill);
   background: rgb(22 34 92 / 0.85);
-  transform: translateX(-50%);
 }
 .co-selector-vista__opcion {
   min-height: 34px;
@@ -32,26 +28,16 @@
   background: var(--co-blanco);
   color: var(--co-azul-profundo);
 }
-@media (max-width: 639px) {
-  .co-selector-vista {
-    position: relative;
-    top: auto;
-    left: auto;
-    margin: 8px auto 0;
-    width: max-content;
-    transform: none;
-  }
-}
 
 /* El tender: una cuerda arriba y las comandas colgadas. */
 .co-tender {
   position: relative;
   min-height: 100dvh;
-  padding: 92px var(--co-space-3) 110px;
+  padding: 64px var(--co-space-3) 110px;
 }
 .co-tender__cuerda {
   position: absolute;
-  top: 70px;
+  top: 42px;
   left: var(--co-space-2);
   right: var(--co-space-2);
   height: 2px;
@@ -183,7 +169,8 @@
 }
 .co-ot-abierta {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* El diagrama de tareas necesita más ancho que la ficha. */
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: var(--co-space-3);
   align-items: start;
 }
@@ -249,4 +236,168 @@
 }
 .co-ot-tarea[data-estado='terminada'] strong {
   text-decoration: line-through;
+}
+
+/* ---------- Fase 14: tareas encadenadas (diagrama de flujo) ---------- */
+.co-flujo {
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.co-flujo__flechas {
+  position: absolute;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.co-flujo__flechas path {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.75);
+  stroke-width: 2;
+}
+.co-flujo__flechas path[data-hecha='true'] {
+  stroke-dasharray: 5 4;
+  stroke: rgb(255 255 255 / 0.4);
+}
+.co-flujo__flechas marker path {
+  fill: rgb(255 255 255 / 0.8);
+  stroke: none;
+}
+.co-flujo__columnas {
+  display: grid;
+  gap: 32px;
+  min-width: max-content;
+}
+.co-flujo__columna {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 160px;
+}
+.co-flujo__titulo {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.7);
+}
+.co-flujo__tarea {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 16px;
+  background: rgb(30 46 112 / 0.95);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+  /* Arrastrar con el dedo en el iPad, sin que se mueva la página. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.co-flujo__tarea:hover,
+.co-flujo__tarea:focus-visible {
+  border-color: rgb(255 255 255 / 0.5);
+}
+.co-flujo__tarea[data-estado='terminada'] {
+  background: linear-gradient(135deg, rgb(23 78 151 / 0.95), rgb(44 42 105 / 0.95));
+}
+.co-flujo__tarea[data-estado='terminada'] strong {
+  text-decoration: line-through;
+}
+.co-flujo__tarea[data-levantada] {
+  filter: brightness(0.7) saturate(0.6);
+  cursor: grabbing;
+}
+.co-flujo__tarea[data-cargando] {
+  border-color: var(--co-blanco);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.35);
+}
+.co-flujo__espera {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgb(255 255 255 / 0.85);
+}
+.co-flujo__carga {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.co-flujo__barra {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+  overflow: hidden;
+}
+.co-flujo__barra::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--co-blanco);
+  transform-origin: left;
+  animation: co-cargar-enlace var(--co-espera-enlace, 2s) linear both;
+}
+@keyframes co-cargar-enlace {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.co-flujo__fantasma {
+  position: fixed;
+  z-index: 100;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--co-blanco);
+  color: var(--co-azul-profundo);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translate(12px, 12px);
+  box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.6);
+}
+
+/* Fase 14: en la matriz, la tarea que espera a otra se ve atenuada. */
+.co-globo[data-espera] {
+  filter: saturate(0.45) brightness(0.85);
+}
+
+/* "Espera a" en el detalle de la tarea. */
+ul.co-fichas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.co-ficha[data-hecha] {
+  opacity: 0.75;
+}
+.co-ficha__quitar {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.15);
+  color: inherit;
+  cursor: pointer;
 }

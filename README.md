@@ -40,13 +40,21 @@ En la matriz (solo tareas; las órdenes de trabajo van aparte):
 - **Orden de trabajo (pedido):** tecla `O` o el botón `OT`, al lado del `+`.
   Tiene la forma de la OT de papel (sin importancia ni urgencia); la primera
   línea del detalle es el título y las fechas van al final.
-- **Órdenes de trabajo (espacio propio):** el selector de arriba al centro
+- **Órdenes de trabajo (espacio propio):** el selector de abajo, junto al `+`,
   cambia entre "Tareas" (la matriz) y "Órdenes de trabajo": las OT abiertas
   colgadas como comandas (detalle, nombre, entrega, debe y avance de sus
   tareas). Tocar una la abre: a la izquierda la OT completa, a la derecha sus
   tareas (tocar una abre su detalle) y "Nueva tarea" (ya relacionada con esa
   OT). Arriba: Terminar, Entregada, Devolver, Copiar mensaje, Copiar teléfono y
   Editar. Al marcarla Entregada deja de estar colgada.
+- **Tareas encadenadas (diagrama de flujo):** en la OT abierta, las tareas van
+  en columnas: 1.º orden = se pueden hacer ya; 2.º, 3.º… = esperan a otras
+  (flechas de la previa a la siguiente). Para encadenar: arrastrar una tarea y
+  mantenerla encima de la que tiene que esperar hasta que se llene la barra
+  (unos 2 segundos); soltar antes cancela. También desde el detalle de la tarea
+  ("Espera a": agregar de una lista o quitar con ✕). Solo entre tareas de la
+  misma OT y sin círculos. En la matriz, la que espera se ve atenuada con
+  "Espera a: …" hasta que se termine la anterior.
 - **Mover de cuadrante:** arrastrar el globo (en el iPad, mantener presionado y
   arrastrar). Cada nivel se ajusta lo mínimo para quedar del lado correcto (por
   ejemplo, urgencia 3 → 6). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
@@ -111,6 +119,7 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
   `GET /api/hechas?desde=`, `GET /api/pedidos` (órdenes de trabajo abiertas, con avance), `GET /api/pedidos/:id/tareas`,
+  `POST /api/tareas/:id/dependencias`, `DELETE /api/tareas/:id/dependencias/:otra`,
   `GET /api/personas`, `PATCH /api/personas/:id`, `PUT /api/personas/orden`,
   `GET|POST /api/categorias`, `PATCH /api/categorias/:id`,
   `PUT /api/categorias/orden`, `GET /api/historial?persona=&tarea=&desde=&hasta=&texto=&antes=`,

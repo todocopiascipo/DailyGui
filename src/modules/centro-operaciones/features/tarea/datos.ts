@@ -15,6 +15,37 @@ export function usePedidos() {
   return useQuery({ queryKey: ['pedidos'], queryFn: () => pedir<TareaMatriz[]>('/pedidos') })
 }
 
+/** Las tareas de una orden de trabajo (Fase 13), terminadas incluidas. */
+export function usePedidoTareas(id: string | null) {
+  return useQuery({
+    queryKey: ['pedido-tareas', id],
+    queryFn: () => pedir<TareaMatriz[]>(`/pedidos/${encodeURIComponent(id!)}/tareas`),
+    enabled: id !== null,
+  })
+}
+
+/** Tareas encadenadas (Fase 14): `id` pasa a esperar a `dependeDe`, o deja de esperarla. */
+export function useEnlaceTareas() {
+  const alGuardar = useAlGuardar()
+  const enlazar = useMutation({
+    mutationFn: ({ id, dependeDe }: { id: string; dependeDe: string }) =>
+      pedir<DetalleTarea>(
+        `/tareas/${encodeURIComponent(id)}/dependencias`,
+        json('POST', { depende_de_id: dependeDe }),
+      ),
+    onSuccess: alGuardar,
+  })
+  const desenlazar = useMutation({
+    mutationFn: ({ id, dependeDe }: { id: string; dependeDe: string }) =>
+      pedir<DetalleTarea>(
+        `/tareas/${encodeURIComponent(id)}/dependencias/${encodeURIComponent(dependeDe)}`,
+        { method: 'DELETE' },
+      ),
+    onSuccess: alGuardar,
+  })
+  return { enlazar, desenlazar }
+}
+
 export function useDetalle(id: string) {
   return useQuery({
     queryKey: ['tarea', id],

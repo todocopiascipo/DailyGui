@@ -4,10 +4,8 @@
  * "Nueva tarea". Arriba, las acciones de la OT: terminar, entregada, devolver,
  * copiar mensaje y teléfono, editar.
  */
-import { useQuery } from '@tanstack/react-query'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Check, Copy, Pencil, Plus } from 'lucide-react'
-import { pedir } from '../../lib/api'
+import { Copy, Pencil, Plus } from 'lucide-react'
 import { textoEntrega, ZONA_HORARIA } from '../../lib/tiempo'
 import { useConectado } from '../../lib/tiempoReal'
 import {
@@ -16,8 +14,8 @@ import {
   useAcciones,
   type RefTarea,
 } from '../matriz/accionesTarea'
-import type { TareaMatriz } from '../matriz/tipos'
-import { useDetalle } from '../tarea/datos'
+import { useDetalle, useEnlaceTareas, usePedidoTareas } from '../tarea/datos'
+import { FlujoTareas } from './FlujoTareas'
 import { Dialogo } from '../tarea/Dialogo'
 import { NOMBRES_ESTADO } from '../tarea/historial'
 
@@ -29,13 +27,6 @@ const MEDIOS: Record<string, string> = {
 const pesos = (n: number) => `$ ${n.toLocaleString('es-AR')}`
 const fechaHora = (iso: string | null) =>
   iso ? formatInTimeZone(new Date(iso), ZONA_HORARIA, "dd/MM/yyyy 'a las' HH:mm") : '—'
-
-function usePedidoTareas(id: string) {
-  return useQuery({
-    queryKey: ['pedido-tareas', id],
-    queryFn: () => pedir<TareaMatriz[]>(`/pedidos/${encodeURIComponent(id)}/tareas`),
-  })
-}
 
 export function DetalleOT({
   id,
@@ -54,6 +45,7 @@ export function DetalleOT({
   const tareas = usePedidoTareas(id)
   const ejecutar = useAcciones()
   const conectado = useConectado()
+  const enlace = useEnlaceTareas()
   const d = detalle.data
   const t = d?.tarea
   const ref: RefTarea | null = d
@@ -165,28 +157,23 @@ export function DetalleOT({
               {tareas.data && tareas.data.length === 0 && (
                 <p className="co-texto-suave">Esta orden todavía no tiene tareas.</p>
               )}
-              <ul className="co-ot-tareas__lista">
-                {(tareas.data ?? []).map((x) => (
-                  <li key={x.id}>
-                    <button
-                      type="button"
-                      className="co-ot-tarea"
-                      data-estado={x.estado}
-                      onClick={() => onAbrirTarea(x.id)}
-                    >
-                      <strong>{x.titulo}</strong>
-                      <span className="co-texto-suave">
-                        {x.estado === 'terminada' && (
-                          <Check size={12} aria-hidden strokeWidth={3} />
-                        )}{' '}
-                        {NOMBRES_ESTADO[x.estado]}
-                        {x.responsables.length > 0 &&
-                          ` · ${x.responsables.map((r) => r.nombre).join(', ')}`}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {(tareas.data ?? []).length > 0 && (
+                <p className="co-texto-suave">
+                  Para encadenar: arrastrá una tarea y mantenela encima de la que tiene que esperar,
+                  hasta que se llene la barra.
+                </p>
+              )}
+              {enlace.enlazar.isError && (
+                <p className="co-aviso" role="alert">
+                  No se pudo encadenar: {enlace.enlazar.error.message}
+                </p>
+              )}
+              <FlujoTareas
+                tareas={tareas.data ?? []}
+                conectado={conectado}
+                onAbrir={onAbrirTarea}
+                onEnlazar={(tarea, dependeDe) => enlace.enlazar.mutate({ id: tarea, dependeDe })}
+              />
             </section>
           </div>
         </>

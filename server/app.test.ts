@@ -779,6 +779,57 @@ describe('API de edición', () => {
     expect(despues.some((p) => p.id === ot)).toBe(false)
   })
 
+  it('tareas encadenadas (Fase 14): misma OT, sin círculos, con historial', async () => {
+    const ot = (
+      await api('POST', '/tareas', { tarea: { titulo: 'OT' }, cliente: { nombre_apellido: 'C' } })
+    ).cuerpo.tarea.id as string
+    const otraOt = (
+      await api('POST', '/tareas', { tarea: { titulo: 'OT 2' }, cliente: { nombre_apellido: 'D' } })
+    ).cuerpo.tarea.id as string
+    const crear = async (titulo: string, pedido_id: string | null = ot) =>
+      (await api('POST', '/tareas', { tarea: { titulo, nivel_importancia: 7, pedido_id } })).cuerpo
+        .tarea.id as string
+    const medir = await crear('Medir')
+    const imprimir = await crear('Imprimir')
+    const colocar = await crear('Colocar')
+    const ajena = await crear('Ajena', otraOt)
+    const suelta = await crear('Suelta', null)
+
+    // Imprimir espera a Medir; Colocar espera a Imprimir.
+    let d = await api('POST', `/tareas/${imprimir}/dependencias`, { depende_de_id: medir })
+    expect(d.estado).toBe(201)
+    expect(d.cuerpo.depende_de).toEqual([{ id: medir, titulo: 'Medir', hecha: false }])
+    expect(d.cuerpo.eventos[0].cambios.espera_a).toEqual({ antes: [], despues: ['Medir'] })
+    await api('POST', `/tareas/${colocar}/dependencias`, { depende_de_id: imprimir })
+
+    // La matriz y la OT lo muestran; al terminar Medir, queda "hecha".
+    const enOt = async () =>
+      (await api('GET', `/pedidos/${ot}/tareas`)).cuerpo as {
+        id: string
+        depende_de: { id: string; hecha: boolean }[]
+      }[]
+    expect((await enOt()).find((t) => t.id === colocar)!.depende_de[0]!.id).toBe(imprimir)
+    await api('POST', `/tareas/${medir}/terminar`)
+    expect((await enOt()).find((t) => t.id === imprimir)!.depende_de[0]!.hecha).toBe(true)
+
+    // Reglas: sin círculos, sin sí misma, solo dentro de la misma OT.
+    for (const [a, b] of [
+      [medir, colocar],
+      [imprimir, imprimir],
+      [ajena, medir],
+      [suelta, medir],
+    ] as const) {
+      expect((await api('POST', `/tareas/${a}/dependencias`, { depende_de_id: b })).estado).toBe(
+        400,
+      )
+    }
+
+    // Desenlazar.
+    d = await api('DELETE', `/tareas/${colocar}/dependencias/${imprimir}`)
+    expect(d.cuerpo.depende_de).toEqual([])
+    expect(d.cuerpo.eventos[0].cambios.espera_a).toEqual({ antes: ['Imprimir'], despues: [] })
+  })
+
   it('rechaza datos inválidos sin guardar nada', async () => {
     const casos = [
       { tarea: { titulo: '', importante: true } },
