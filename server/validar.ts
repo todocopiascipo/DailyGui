@@ -3,13 +3,7 @@
  * con su tipo y rango; la base vuelve a controlar todo con sus restricciones.
  */
 import type { Tarea } from './reglas.ts'
-import type {
-  CambiosTarea,
-  DatosCliente,
-  DatosNuevaTarea,
-  DatosProyecto,
-  ExtrasEdicion,
-} from './servicio.ts'
+import type { CambiosTarea, DatosCliente, DatosNuevaTarea, ExtrasEdicion } from './servicio.ts'
 import { ErrorNoEncontrado, ErrorValidacion } from './servicio.ts'
 
 type Objeto = Record<string, unknown>
@@ -74,6 +68,13 @@ function opcion<T extends string>(v: unknown, opciones: readonly string[], nombr
   return v as T
 }
 
+function nivel(v: unknown, nombre: string): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 10) {
+    falla(`${nombre}: tiene que ser de 0 a 10`)
+  }
+  return v
+}
+
 function booleano(v: unknown, nombre: string): boolean {
   if (typeof v !== 'boolean') falla(`${nombre}: tiene que ser Sí o No`)
   return v
@@ -87,18 +88,23 @@ function camposTarea(o: Objeto): CambiosTarea {
   if ('tipo' in o) c.tipo = opcion(o.tipo, TIPOS, 'Tipo')
   if ('categoria_id' in o) c.categoria_id = idOpcional(o.categoria_id, 'Categoría')
   if ('pedido_id' in o) c.pedido_id = idOpcional(o.pedido_id, 'Pedido relacionado')
-  if ('proyecto_id' in o) c.proyecto_id = idOpcional(o.proyecto_id, 'Proyecto')
   if ('sena' in o) c.sena = importe(o.sena, 'Seña')
   if ('saldo' in o) c.saldo = importe(o.saldo, 'Saldo')
   if ('sena_medio' in o) c.sena_medio = medio(o.sena_medio, 'Medio de pago de la seña')
   if ('saldo_medio' in o) c.saldo_medio = medio(o.saldo_medio, 'Medio de pago del saldo')
-  if ('importante' in o) c.importante = booleano(o.importante, 'Importante')
-  if ('urgencia_manual' in o) {
+  // Importancia y urgencia de 0 a 10 (Fase 12). Por compatibilidad se aceptan
+  // los campos viejos ("importante" Sí/No y urgencia de 1 a 5) y se convierten.
+  if ('nivel_importancia' in o) c.nivel_importancia = nivel(o.nivel_importancia, 'Importancia')
+  else if ('importante' in o) {
+    c.nivel_importancia = booleano(o.importante, 'Importante') ? 7 : 3
+  }
+  if ('nivel_urgencia' in o) c.nivel_urgencia = nivel(o.nivel_urgencia, 'Urgencia')
+  else if ('urgencia_manual' in o && o.urgencia_manual !== null) {
     const u = o.urgencia_manual
-    if (u !== null && !(typeof u === 'number' && Number.isInteger(u) && u >= 1 && u <= 5)) {
+    if (!(typeof u === 'number' && Number.isInteger(u) && u >= 1 && u <= 5)) {
       falla('Urgencia: tiene que ser de 1 a 5')
     }
-    c.urgencia_manual = u
+    c.nivel_urgencia = u * 2
   }
   if ('estado' in o) c.estado = opcion(o.estado, ESTADOS, 'Estado')
   if ('motivo_espera' in o) {
@@ -110,7 +116,6 @@ function camposTarea(o: Objeto): CambiosTarea {
   }
   if ('fecha_inicio' in o) c.fecha_inicio = fecha(o.fecha_inicio, 'Hora de inicio')
   if ('fecha_entrega' in o) c.fecha_entrega = fecha(o.fecha_entrega, 'Entrega')
-  if ('mostrar_en_matriz' in o) c.mostrar_en_matriz = booleano(o.mostrar_en_matriz, 'Mostrar')
 
   // Fuera de "en espera" no hay motivo.
   if (c.estado && c.estado !== 'en_espera') {
@@ -150,8 +155,12 @@ export function validarNuevaTarea(cuerpo: unknown): PedidoCrearTarea {
   const o = objeto(cuerpo, 'Pedido')
   const t = objeto(o.tarea, 'Tarea')
   if (!('titulo' in t)) falla('Título: no puede quedar vacío')
-  if (!('importante' in t)) falla('Elegí si es importante')
   const campos = camposTarea(t)
+  // Sin tipo: con cliente es un pedido (OT); si no, una tarea.
+  campos.tipo ??= o.cliente ? 'pedido' : 'interna'
+  if (campos.tipo === 'interna' && campos.nivel_importancia === undefined) {
+    falla('Elegí la importancia')
+  }
   const subtareas = o.subtareas === undefined ? [] : o.subtareas
   if (!Array.isArray(subtareas) || subtareas.length > 50) falla('Subtareas: formato inválido')
   const c = o.cliente === undefined ? null : cliente(o.cliente)
@@ -182,10 +191,7 @@ export function validarEdicionTarea(cuerpo: unknown): {
   // Una tarea interna no tiene cliente.
   if (cambios.tipo === 'interna') extras.cliente = null
   // Un pedido no tiene "pedido relacionado" (eso es de las internas).
-  if (cambios.tipo === 'pedido') {
-    cambios.pedido_id = null
-    cambios.proyecto_id = null
-  }
+  if (cambios.tipo === 'pedido') cambios.pedido_id = null
   return { cambios, extras }
 }
 
@@ -278,29 +284,4 @@ export function validarCambioPin(cuerpo: unknown) {
     pin_actual: typeof o.pin_actual === 'string' ? o.pin_actual.slice(0, 16) : null,
     pin_nuevo: o.pin_nuevo === null ? null : pin(o.pin_nuevo, 'PIN'),
   }
-}
-
-const ESTADOS_PROYECTO = ['activo', 'en_pausa', 'terminado', 'cancelado']
-
-/** Campos de un proyecto (alta: `nuevo`, exige nombre). Solo incluye los que vienen. */
-export function validarProyecto(cuerpo: unknown, nuevo: boolean): DatosProyecto & { id?: string } {
-  const o = objeto(cuerpo, 'Proyecto')
-  const c: DatosProyecto & { id?: string } = {}
-  if (nuevo && !('nombre' in o)) falla('Nombre del proyecto: no puede quedar vacío')
-  if (nuevo && 'id' in o) c.id = id(o.id, 'Proyecto')
-  if ('nombre' in o) c.nombre = texto(o.nombre, 'Nombre del proyecto', 120)
-  if ('descripcion' in o) c.descripcion = textoOpcional(o.descripcion, 'Descripción', 2000)
-  if ('estado' in o) c.estado = opcion(o.estado, ESTADOS_PROYECTO, 'Estado')
-  if ('fecha_inicio' in o) c.fecha_inicio = fecha(o.fecha_inicio, 'Inicio')
-  if ('fecha_objetivo' in o) c.fecha_objetivo = fecha(o.fecha_objetivo, 'Fecha objetivo')
-  if ('responsable_id' in o) c.responsable_id = idOpcional(o.responsable_id, 'Responsable')
-  if ('categoria_id' in o) c.categoria_id = idOpcional(o.categoria_id, 'Categoría')
-  return c
-}
-
-/** Orden de las tareas de un proyecto: { tareas: [ids] }. */
-export function validarOrdenProyecto(cuerpo: unknown): string[] {
-  const o = objeto(cuerpo, 'Orden')
-  if (!Array.isArray(o.tareas) || o.tareas.length > 500) falla('Orden: formato inválido')
-  return o.tareas.map((t) => id(t, 'Tarea'))
 }

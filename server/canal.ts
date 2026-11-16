@@ -8,7 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 export interface Aviso {
   /** Qué cambió, para que cada pantalla decida qué volver a pedir. */
-  recursos: ('tareas' | 'personas' | 'configuracion' | 'proyectos' | 'catalogos')[]
+  recursos: ('tareas' | 'personas' | 'configuracion' | 'catalogos')[]
   tarea_id?: string | null
 }
 

@@ -1,13 +1,10 @@
 import { useId, useState } from 'react'
-import { aFechaHora, aIso } from '../../lib/fechas'
-import { esUrgente, urgenciaEstimada } from '../../lib/urgencia'
-import { useMatriz } from '../matriz/datos'
+import { aFechaHora } from '../../lib/fechas'
 import { nuevoId } from '../../lib/ids'
 import { useConectado } from '../../lib/tiempoReal'
 import { AvisoSinConexion } from './AvisoSinConexion'
 import {
   borradorVacio,
-  conUrgenciaElegida,
   cuerpoNuevaTarea,
   leerImporte,
   tareaProvisoria,
@@ -17,13 +14,7 @@ import {
   type Errores,
   type MedioPago,
 } from './borrador'
-import {
-  CampoFechaHora,
-  ElegirResponsables,
-  ElegirUrgente,
-  SiNo,
-  SugerenciasCliente,
-} from './controles'
+import { CampoFechaHora, ElegirResponsables, SugerenciasCliente } from './controles'
 import { MEDIOS_PAGO, useClientesPorTelefono } from './utilidades'
 import type { AltaPedida, EstadoCreacion } from './CreacionRapida'
 import { useCatalogos } from './datos'
@@ -63,20 +54,11 @@ export function OrdenDeTrabajo({ ahora, onCerrar, onGuardar, inicial, error }: P
   }
   const cliente = (c: Partial<Borrador['cliente']>) => cambiar('cliente', { ...b.cliente, ...c })
   const total = (leerImporte(b.sena) ?? 0) + (leerImporte(b.saldo) ?? 0)
-  const umbrales = useMatriz().data?.config.umbrales
-  const entregaIso = aIso(b.entrega)
-  const urgenteSegunFecha = esUrgente(
-    urgenciaEstimada(entregaIso ? new Date(entregaIso) : null, ahora, umbrales),
-  )
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault()
     if (!conectado) return
-    const completo: Borrador = conUrgenciaElegida(
-      { ...b, tipo: 'pedido', titulo: tituloDeDetalle(b.descripcion) },
-      ahora,
-      umbrales,
-    )
+    const completo: Borrador = { ...b, tipo: 'pedido', titulo: tituloDeDetalle(b.descripcion) }
     const err = validar(completo)
     setErrores(err)
     if (Object.keys(err).length > 0) return
@@ -212,25 +194,14 @@ export function OrdenDeTrabajo({ ahora, onCerrar, onGuardar, inicial, error }: P
           error={errores.entrega}
         />
 
-        {/* Lo que la matriz necesita y la OT de papel no tiene. */}
+        {/* Lo que la OT de papel no tiene. Sin importancia ni urgencia (Fase 12:
+            eso es solo de las tareas). */}
         <div className="co-ot__matriz">
           <ElegirResponsables
             personas={personas}
             elegidas={b.responsables}
             onCambiar={(v) => cambiar('responsables', v)}
           />
-          <div className="co-fila co-fila--campos">
-            <SiNo
-              valor={b.importante}
-              onCambiar={(v) => cambiar('importante', v)}
-              error={errores.importante}
-            />
-            <ElegirUrgente
-              valor={b.urgente}
-              onCambiar={(v) => cambiar('urgente', v)}
-              urgenteSegunFecha={urgenteSegunFecha}
-            />
-          </div>
         </div>
       </form>
     </Dialogo>

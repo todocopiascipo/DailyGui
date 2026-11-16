@@ -1,13 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { pedir } from '../../lib/api'
 import { PLANTILLA_POR_DEFECTO } from '../../lib/mensaje'
-import {
-  DISPOSICION_POR_DEFECTO,
-  UMBRALES_POR_DEFECTO,
-  type Cuadrante,
-  type Disposicion,
-  type Umbrales,
-} from '../../lib/urgencia'
+import { DISPOSICION_POR_DEFECTO, type Cuadrante, type Disposicion } from '../../lib/urgencia'
 import type { ConfigMatriz, TareaMatriz } from './tipos'
 
 const CUADRANTES: Cuadrante[] = ['hacer', 'planificar', 'delegar', 'eliminar']
@@ -19,15 +13,6 @@ function esObjeto(v: unknown): v is Record<string, unknown> {
 /** Lee la configuración con tolerancia: si algo es inválido, usa el valor por defecto. */
 export function leerConfigMatriz(filas: { clave: string; valor: unknown }[]): ConfigMatriz {
   const valor = (clave: string) => filas.find((f) => f.clave === clave)?.valor
-
-  const u = valor('umbrales_urgencia')
-  const umbrales: Umbrales = { ...UMBRALES_POR_DEFECTO }
-  if (esObjeto(u)) {
-    for (const k of Object.keys(umbrales) as (keyof Umbrales)[]) {
-      const n = u[k]
-      if (typeof n === 'number' && n > 0) umbrales[k] = n
-    }
-  }
 
   const d = valor('disposicion_cuadrantes')
   let disposicion: Disposicion = DISPOSICION_POR_DEFECTO
@@ -49,7 +34,6 @@ export function leerConfigMatriz(filas: { clave: string; valor: unknown }[]): Co
   const dias = valor('papelera_dias')
   return {
     papeleraDias: typeof dias === 'number' && Number.isInteger(dias) && dias > 0 ? dias : 30,
-    umbrales,
     disposicion,
     confeti: typeof confeti === 'boolean' ? confeti : true,
     plantilla:

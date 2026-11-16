@@ -11,6 +11,8 @@ const base: TareaMatriz = {
   titulo: 'Imprimir vinilo',
   importante: true,
   urgencia_manual: null,
+  nivel_importancia: 8,
+  nivel_urgencia: 8,
   estado: 'pendiente',
   motivo_espera: null,
   motivo_espera_detalle: null,

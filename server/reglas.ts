@@ -7,6 +7,9 @@ import type { Database } from '../src/modules/centro-operaciones/lib/database.ty
 
 export type Tarea = Database['public']['Tables']['tareas']['Row']
 
+/** De 6 a 10, el nivel cuenta como "sí" (importante / urgente). */
+export const UMBRAL_SI = 6
+
 export type AccionEvento = Database['public']['Tables']['eventos']['Row']['accion']
 
 /** Pista opcional que manda la interfaz para distinguir acciones en el historial. */
@@ -32,6 +35,11 @@ const IGNORAR_EN_HISTORIAL = [
   'terminada_at',
   'entregada_at',
   'orden_proyecto',
+  // Derivados de los niveles 0-10 (Fase 12).
+  'importante',
+  'urgencia_manual',
+  'mostrar_en_matriz',
+  'proyecto_id',
 ] as const
 
 /**
@@ -64,6 +72,18 @@ export function reglasAlGuardar(
       t.eliminada_por = null
     }
   }
+
+  // Niveles 0-10 (Fase 12): solo las tareas los tienen; "importante" se deriva.
+  if (t.tipo === 'interna') {
+    t.importante = t.nivel_importancia >= UMBRAL_SI
+  } else {
+    t.importante = false
+    t.nivel_importancia = 0
+    t.nivel_urgencia = 0
+  }
+  t.urgencia_manual = null
+  t.proyecto_id = null
+  t.mostrar_en_matriz = true
 
   const terminadaAntes = anterior && ['terminada', 'entregada'].includes(anterior.estado)
   t.terminada_at =
@@ -155,25 +175,4 @@ export function eventoDeTarea(
     persona_id: persona ?? nueva.actualizada_por,
     cambios: { ...cambios, titulo: nueva.titulo },
   }
-}
-
-/**
- * Proyectos internos (decisión 11): una tarea de proyecto aparece en la matriz
- * sola cuando tiene fecha de entrega o está en proceso; el interruptor
- * "Mostrar en la matriz" (`explicito`) siempre manda. Las tareas sin proyecto
- * se muestran siempre.
- */
-export function reglaMostrarEnMatriz(
-  anterior: Tarea | null,
-  nueva: Tarea,
-  explicito: boolean,
-): boolean {
-  if (!nueva.proyecto_id) return true
-  if (explicito) return nueva.mostrar_en_matriz
-  const lapide = (t: Tarea) => t.fecha_entrega !== null || t.estado === 'en_proceso'
-  // Recién entra al proyecto: según tenga fecha o esté en proceso.
-  if (!anterior || anterior.proyecto_id !== nueva.proyecto_id) return lapide(nueva)
-  // Ganó fecha de entrega o pasó a en proceso: se prende.
-  if (lapide(nueva) && !lapide(anterior)) return true
-  return nueva.mostrar_en_matriz
 }

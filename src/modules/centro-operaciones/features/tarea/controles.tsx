@@ -4,6 +4,7 @@ import { ATAJOS, aplicarAtajo, SIN_FECHA, type FechaHora } from '../../lib/fecha
 import type { PersonaBreve } from '../matriz/tipos'
 import type { BorradorCliente, MedioPago } from './borrador'
 import { useConectado } from '../../lib/tiempoReal'
+import { cuadranteDeNiveles, esAlto, NIVEL_MAX, NOMBRES_CUADRANTE } from '../../lib/urgencia'
 import { useCrearPersona } from './datos'
 import type { Cliente } from './tipos'
 import { MEDIOS_PAGO, normalizar, useClientesPorTelefono } from './utilidades'
@@ -451,93 +452,71 @@ export function CampoPago({
   )
 }
 
-/** Slider de 5 pasos con la urgencia estimada al lado (especificación 6.1). */
-export function SliderUrgencia({
-  manual,
-  estimada,
+/**
+ * Importancia y urgencia de una tarea: dos sliders de 0 a 10 (Fase 12). De 6
+ * a 10 cuenta como "sí". Muestra en qué cuadrante va a quedar.
+ */
+export function SlidersPrioridad({
+  importancia,
+  urgencia,
   onCambiar,
 }: {
-  manual: number | null
-  estimada: number
-  onCambiar: (v: number | null) => void
+  importancia: number
+  urgencia: number
+  onCambiar: (c: { nivel_importancia?: number; nivel_urgencia?: number }) => void
 }) {
-  const id = useId()
-  const valor = manual ?? estimada
   return (
-    <div className="co-campo">
-      <div className="co-fila co-fila--entre">
-        <label className="co-campo__etiqueta" htmlFor={id}>
-          Urgencia: {valor}
-          {manual === null ? ' (automática)' : ' (manual)'}
-        </label>
-        <span className="co-texto-suave">Urgencia estimada: {estimada}</span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={1}
-        max={5}
-        step={1}
-        className="co-slider"
-        data-automatica={manual === null}
-        value={valor}
-        aria-valuetext={`${valor} de 5${manual === null ? ', automática' : ''}`}
-        onChange={(e) => onCambiar(Number(e.target.value))}
+    <div className="co-grupo">
+      <SliderNivel
+        nombre="Importancia"
+        valor={importancia}
+        onCambiar={(v) => onCambiar({ nivel_importancia: v })}
       />
-      <div className="co-slider__marcas" aria-hidden>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <span key={n}>{n}</span>
-        ))}
-      </div>
-      {manual !== null && (
-        <button
-          type="button"
-          className="co-boton-sutil co-alinear-inicio"
-          onClick={() => onCambiar(null)}
-        >
-          Volver a la automática
-        </button>
-      )}
+      <SliderNivel
+        nombre="Urgencia"
+        valor={urgencia}
+        onCambiar={(v) => onCambiar({ nivel_urgencia: v })}
+      />
+      <p className="co-texto-suave" aria-live="polite">
+        Va a: <strong>{NOMBRES_CUADRANTE[cuadranteDeNiveles(importancia, urgencia)]}</strong>
+      </p>
     </div>
   )
 }
 
-/**
- * Urgente: Sí / No / Por fecha (especificación 6.1: la urgencia se estima por
- * la entrega; elegir Sí o No la fija). `urgenteSegunFecha` es cómo quedaría
- * hoy si se deja "Por fecha".
- */
-export function ElegirUrgente({
+function SliderNivel({
+  nombre,
   valor,
   onCambiar,
-  urgenteSegunFecha,
 }: {
-  valor: boolean | null
-  onCambiar: (v: boolean | null) => void
-  urgenteSegunFecha: boolean
+  nombre: string
+  valor: number
+  onCambiar: (v: number) => void
 }) {
-  const opcion = valor === null ? 'fecha' : valor ? 'si' : 'no'
+  const id = useId()
   return (
-    <Campo etiqueta="Urgente" como="fieldset">
-      {() => (
-        <div className="co-grupo">
-          <Segmentado
-            etiqueta="Urgente"
-            valor={opcion}
-            onCambiar={(v) => onCambiar(v === 'fecha' ? null : v === 'si')}
-            opciones={[
-              { valor: 'si', texto: 'Sí' },
-              { valor: 'no', texto: 'No' },
-              { valor: 'fecha', texto: 'Por fecha' },
-            ]}
-          />
-          {valor === null && (
-            <p className="co-texto-suave">
-              Se calcula con la entrega: hoy {urgenteSegunFecha ? 'es urgente' : 'no es urgente'}.
-            </p>
-          )}
-        </div>
-      )}
-    </Campo>
+    <div className="co-campo">
+      <label className="co-campo__etiqueta" htmlFor={id}>
+        {nombre}: {valor} {esAlto(valor) ? '(sí)' : '(no)'}
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={NIVEL_MAX}
+        step={1}
+        className="co-slider"
+        value={valor}
+        aria-valuetext={`${valor} de ${NIVEL_MAX}, ${esAlto(valor) ? 'sí' : 'no'}`}
+        onChange={(e) => onCambiar(Number(e.target.value))}
+      />
+      <div className="co-slider__marcas" aria-hidden>
+        {Array.from({ length: NIVEL_MAX + 1 }, (_, n) => (
+          <span key={n} data-alto={esAlto(n) || undefined}>
+            {n}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }

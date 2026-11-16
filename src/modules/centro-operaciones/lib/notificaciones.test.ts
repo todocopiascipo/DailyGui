@@ -12,6 +12,8 @@ const tarea = (c: Partial<TareaMatriz>): TareaMatriz => ({
   titulo: 'Folletos',
   importante: true,
   urgencia_manual: null,
+  nivel_importancia: 8,
+  nivel_urgencia: 6,
   estado: 'pendiente',
   estado_anterior: null,
   motivo_espera: null,

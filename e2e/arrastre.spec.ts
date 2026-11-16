@@ -57,7 +57,7 @@ test('mover a otro cuadrante cambia importancia y urgencia, y queda en el histor
   page,
 }) => {
   const titulo = unico('Mover')
-  await crearPorApi(page, { titulo, importante: false })
+  await crearPorApi(page, { titulo, nivel_importancia: 3, nivel_urgencia: 2 })
   await expect(cuadrante(page, 'eliminar').getByText(titulo)).toBeVisible()
 
   await arrastrar(page, titulo, () => centro(page, '[data-cuadrante="hacer"]'))
@@ -69,7 +69,9 @@ test('mover a otro cuadrante cambia importancia y urgencia, y queda en el histor
   await page.getByRole('button', { name: `Abrir ${titulo}` }).click()
   const panel = page.getByRole('dialog', { name: titulo })
   await expect(panel.getByText('Movió la tarea de cuadrante')).toBeVisible()
-  await expect(panel.getByText('Urgencia: 3 (manual)')).toBeVisible()
+  // Cada nivel sube lo mínimo para quedar del lado "sí": 6.
+  await expect(panel.getByLabel(/^Importancia/)).toHaveValue('6')
+  await expect(panel.getByLabel(/^Urgencia/)).toHaveValue('6')
 })
 
 test('soltar en el mismo cuadrante no cambia nada; un toque sigue abriendo el detalle', async ({
@@ -202,24 +204,30 @@ test('orden de trabajo: con la forma de la OT de papel', async ({ page }) => {
   await expect(ot.getByText('Total (seña + debe): $ 12.500')).toBeVisible()
   await ot.getByLabel('Celular').fill('2991234567')
   await ot.getByLabel('Nombre', { exact: true }).fill('Cliente OT')
-  await ot
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'Sí' })
-    .click()
   await ot.getByRole('button', { name: 'Crear OT' }).click()
 
-  // La primera línea del detalle es el título.
-  await expect(cuadrante(page, 'planificar').getByText(detalle)).toBeVisible()
-  await page.getByRole('button', { name: `Abrir ${detalle}` }).click()
-  const panel = page.getByRole('dialog', { name: detalle })
-  await expect(panel.getByLabel('Descripción')).toHaveValue(`${detalle}\nCorte y colocación`)
-  await expect(panel.getByLabel('Seña', { exact: true })).toHaveValue('5000')
-  await expect(
-    panel
-      .getByRole('group', { name: 'Medio de pago: Seña' })
-      .getByRole('button', { name: 'Efectivo' }),
-  ).toHaveAttribute('aria-pressed', 'true')
-  await expect(panel.getByLabel('Teléfono')).toHaveValue('2991234567')
+  // Las OT ya no van a la matriz (Fase 12): avisa que quedó guardada.
+  await expect(page.getByText(`Orden de trabajo "${detalle}" guardada`)).toBeVisible()
+  await expect(globo(page, detalle)).toHaveCount(0)
+  // La primera línea del detalle es el título; lo cargado quedó guardado.
+  const pedidos = (await (await page.request.get('/api/pedidos')).json()) as {
+    id: string
+    titulo: string
+  }[]
+  const guardada = pedidos.find((p) => p.titulo === detalle)!
+  const d = await (await page.request.get(`/api/tareas/${guardada.id}`)).json()
+  expect(d.tarea).toMatchObject({
+    tipo: 'pedido',
+    descripcion: `${detalle}
+Corte y colocación`,
+    sena: 5000,
+    sena_medio: 'efectivo',
+    saldo: 7500,
+  })
+  expect(d.cliente).toMatchObject({ nombre_apellido: 'Cliente OT', telefono: '2991234567' })
+  // Las OT no están en la matriz (limpiar no las ve): se borran acá.
+  await page.request.post(`/api/tareas/${guardada.id}/eliminar`)
+  await page.request.delete(`/api/tareas/${guardada.id}`)
 })
 
 test('responsables: buscar elige a la persona existente en vez de duplicarla', async ({ page }) => {

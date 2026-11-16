@@ -10,12 +10,7 @@ import { estadoNotificaciones, type EstadoNotificaciones } from '../../lib/notif
 import { guardarPreferencia, usePreferencia } from '../../lib/preferencias'
 import { diaLocal } from '../../lib/tiempo'
 import { useConectado } from '../../lib/tiempoReal'
-import {
-  NOMBRES_CUADRANTE,
-  type Cuadrante,
-  type Disposicion,
-  type Umbrales,
-} from '../../lib/urgencia'
+import { NOMBRES_CUADRANTE, type Cuadrante, type Disposicion } from '../../lib/urgencia'
 import { useMatriz } from '../matriz/datos'
 import { Campo } from '../tarea/controles'
 import { useCrearPersona } from '../tarea/datos'
@@ -372,66 +367,39 @@ const LUGARES: { clave: keyof Disposicion; texto: string }[] = [
   { clave: 'abajo_derecha', texto: 'Abajo a la derecha' },
 ]
 
-const NIVELES: { clave: keyof Umbrales; texto: string; ayuda: string }[] = [
-  { clave: 'nivel_5_horas', texto: 'Crítica', ayuda: 'Faltan menos de estas horas' },
-  { clave: 'nivel_3_horas', texto: 'Alta', ayuda: 'Faltan menos de estas horas' },
-  { clave: 'nivel_2_horas', texto: 'Media', ayuda: 'Faltan menos de estas horas' },
-]
-
 export function SeccionUrgencia() {
   const config = useMatriz().data?.config
   if (!config) return null
   return (
-    <FormularioUrgencia
-      key={JSON.stringify([config.umbrales, config.disposicion])}
-      umbrales={config.umbrales}
+    <FormularioCuadrantes
+      key={JSON.stringify(config.disposicion)}
       disposicion={config.disposicion}
     />
   )
 }
 
-function FormularioUrgencia({
-  umbrales,
-  disposicion,
-}: {
-  umbrales: Umbrales
-  disposicion: Disposicion
-}) {
+/**
+ * Dónde va cada cuadrante en la pantalla. La urgencia ya no se calcula sola
+ * por la fecha (Fase 12): la eligen los sliders de cada tarea.
+ */
+function FormularioCuadrantes({ disposicion }: { disposicion: Disposicion }) {
   const guardar = useGuardarConfiguracion()
   const conectado = useConectado()
   const idForm = useId()
-  const [horas, setHoras] = useState(() =>
-    Object.fromEntries(NIVELES.map((n) => [n.clave, String(umbrales[n.clave])])),
-  )
   const [lugares, setLugares] = useState<Disposicion>(disposicion)
   const [error, setError] = useState<string | null>(null)
   const [listo, setListo] = useState(false)
-  const numeros = Object.fromEntries(
-    NIVELES.map((n) => [n.clave, Number(horas[n.clave]?.replace(',', '.'))]),
-  ) as unknown as Umbrales
-  const cambioUmbrales = NIVELES.some((n) => numeros[n.clave] !== umbrales[n.clave])
   const cambioLugares = JSON.stringify(lugares) !== JSON.stringify(disposicion)
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setListo(false)
-    if (NIVELES.some((n) => !(numeros[n.clave] > 0 && numeros[n.clave] <= 720))) {
-      return setError('Las horas tienen que estar entre 0 y 720')
-    }
-    if (!(
-      numeros.nivel_5_horas < numeros.nivel_3_horas && numeros.nivel_3_horas < numeros.nivel_2_horas
-    )) {
-      return setError('Las horas tienen que ir de menor a mayor: crítica < alta < media')
-    }
     if (new Set(Object.values(lugares)).size !== 4) {
       return setError('Cada cuadrante tiene que aparecer una sola vez')
     }
     try {
-      if (cambioUmbrales) await guardar.mutateAsync({ clave: 'umbrales_urgencia', valor: numeros })
-      if (cambioLugares) {
-        await guardar.mutateAsync({ clave: 'disposicion_cuadrantes', valor: lugares })
-      }
+      await guardar.mutateAsync({ clave: 'disposicion_cuadrantes', valor: lugares })
       setListo(true)
     } catch (err) {
       setError(mensaje(err))
@@ -441,29 +409,13 @@ function FormularioUrgencia({
   return (
     <section className="co-seccion" aria-labelledby="co-titulo-urgencia">
       <h3 id="co-titulo-urgencia" className="co-subtitulo">
-        Urgencia y cuadrantes
+        Cuadrantes
       </h3>
       <p className="co-texto-suave">
-        Urgencia automática según cuánto falta para la entrega. "Vence hoy" (nivel 4) es el mismo
-        día; con más tiempo que "Media", es baja.
+        Cada tarea va a su cuadrante según su importancia y su urgencia (de 0 a 10; de 6 en adelante
+        cuenta como "sí"). Acá se elige dónde se ve cada cuadrante.
       </p>
       <form id={idForm} className="co-formulario" onSubmit={enviar} noValidate>
-        <div className="co-fila co-fila--campos">
-          {NIVELES.map((n) => (
-            <Campo key={n.clave} etiqueta={`${n.texto} (horas)`}>
-              {({ id }) => (
-                <input
-                  id={id}
-                  className="co-entrada"
-                  inputMode="decimal"
-                  title={n.ayuda}
-                  value={horas[n.clave]}
-                  onChange={(e) => setHoras((h) => ({ ...h, [n.clave]: e.target.value }))}
-                />
-              )}
-            </Campo>
-          ))}
-        </div>
         <div className="co-fila co-fila--campos co-fila--dos">
           {LUGARES.map((l) => (
             <Campo key={l.clave} etiqueta={l.texto}>
@@ -487,7 +439,7 @@ function FormularioUrgencia({
           ))}
         </div>
         <AvisoError error={error} />
-        {listo && !cambioUmbrales && !cambioLugares && (
+        {listo && !cambioLugares && (
           <p className="co-texto-suave" role="status">
             Guardado.
           </p>
@@ -495,9 +447,9 @@ function FormularioUrgencia({
         <button
           type="submit"
           className="co-boton co-alinear-inicio"
-          disabled={!conectado || (!cambioUmbrales && !cambioLugares) || guardar.isPending}
+          disabled={!conectado || !cambioLugares || guardar.isPending}
         >
-          Guardar urgencia y cuadrantes
+          Guardar cuadrantes
         </button>
       </form>
     </section>

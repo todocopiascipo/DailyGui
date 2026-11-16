@@ -27,7 +27,7 @@ interface Props {
 export function Matriz({ tareas, config, ahora, onAbrir }: Props) {
   const angosto = useEsAngosto()
   const [ampliado, setAmpliado] = useState<IdCuadrante | null>(null)
-  const grupos = useMemo(() => agruparPorCuadrante(tareas, config, ahora), [tareas, config, ahora])
+  const grupos = useMemo(() => agruparPorCuadrante(tareas, ahora), [tareas, ahora])
 
   useEffect(() => {
     if (!ampliado) return

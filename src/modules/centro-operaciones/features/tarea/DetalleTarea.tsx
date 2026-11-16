@@ -7,9 +7,7 @@ import {
 } from '../matriz/accionesTarea'
 import { formatInTimeZone } from 'date-fns-tz'
 import { useEffect, useId, useRef, useState } from 'react'
-import { aIso } from '../../lib/fechas'
 import { ZONA_HORARIA } from '../../lib/tiempo'
-import { urgenciaEstimada, type Umbrales } from '../../lib/urgencia'
 import type { PersonaBreve } from '../matriz/tipos'
 import { borradorDe, cuerpoEdicion, validar, type Borrador, type Errores } from './borrador'
 import {
@@ -19,8 +17,7 @@ import {
   CamposCliente,
   ElegirResponsables,
   Segmentado,
-  SiNo,
-  SliderUrgencia,
+  SlidersPrioridad,
 } from './controles'
 import { useConectado } from '../../lib/tiempoReal'
 import { AvisoSinConexion } from './AvisoSinConexion'
@@ -29,14 +26,12 @@ import { Dialogo } from './Dialogo'
 import { describirEvento, momentoEvento, NOMBRES_ESTADO, NOMBRES_MOTIVO } from './historial'
 import { SelectorCategoria } from './SelectorCategoria'
 import { SelectorPedido } from './SelectorPedido'
-import { SelectorProyecto } from './SelectorProyecto'
 import { Subtareas } from './Subtareas'
 import type { DetalleTarea as Detalle } from './tipos'
 
 interface Props {
   id: string
   ahora: Date
-  umbrales: Umbrales
   onCerrar: () => void
   /** Pide eliminar (con confirmación): la manda a la papelera. */
   onAccion?: EjecutarAccion
@@ -45,7 +40,7 @@ interface Props {
 }
 
 /** Detalle de la tarea (especificación 7.4): consultar y modificar todo. */
-export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion, onAbrirOtra }: Props) {
+export function DetalleTarea({ id, ahora, onCerrar, onAccion, onAbrirOtra }: Props) {
   const detalle = useDetalle(id)
   if (!detalle.data) {
     return (
@@ -64,7 +59,6 @@ export function DetalleTarea({ id, ahora, umbrales, onCerrar, onAccion, onAbrirO
     <Editor
       detalle={detalle.data}
       ahora={ahora}
-      umbrales={umbrales}
       onCerrar={onCerrar}
       onAccion={onAccion}
       onAbrirOtra={onAbrirOtra}
@@ -77,14 +71,12 @@ const ESTADOS_EDITABLES = ['pendiente', 'en_proceso', 'en_espera'] as const
 function Editor({
   detalle,
   ahora,
-  umbrales,
   onCerrar,
   onAccion,
   onAbrirOtra,
 }: {
   detalle: Detalle
   ahora: Date
-  umbrales: Umbrales
   onCerrar: () => void
   onAccion?: EjecutarAccion
   onAbrirOtra?: (id: string) => void
@@ -139,8 +131,6 @@ function Editor({
     })
   }
 
-  const entregaIso = aIso(b.entrega)
-  const estimada = urgenciaEstimada(entregaIso ? new Date(entregaIso) : null, ahora, umbrales)
   const t = detalle.tarea
   const estadoEditable = (ESTADOS_EDITABLES as readonly string[]).includes(b.estado)
   // Lo guardado (no lo que se está editando) define qué acciones de estado hay.
@@ -267,17 +257,14 @@ function Editor({
           error={errores.inicio}
         />
 
-        <SiNo
-          valor={b.importante}
-          onCambiar={(v) => cambiar('importante', v)}
-          error={errores.importante}
-        />
-
-        <SliderUrgencia
-          manual={b.urgencia_manual}
-          estimada={estimada}
-          onCambiar={(v) => cambiar('urgencia_manual', v)}
-        />
+        {/* Solo las tareas tienen importancia y urgencia (las OT no). */}
+        {b.tipo === 'interna' && (
+          <SlidersPrioridad
+            importancia={b.nivel_importancia}
+            urgencia={b.nivel_urgencia}
+            onCambiar={(c) => setB((x) => ({ ...x, ...c }))}
+          />
+        )}
 
         {estadoEditable ? (
           <>
@@ -412,27 +399,6 @@ function Editor({
               >
                 <Link2 size={14} aria-hidden /> Abrir el pedido "{detalle.pedido.titulo}"
               </button>
-            )}
-            <SelectorProyecto
-              valor={b.proyecto_id}
-              onCambiar={(v) => cambiar('proyecto_id', v)}
-              actual={detalle.proyecto}
-            />
-            {b.proyecto_id && (
-              <label className="co-interruptor">
-                <input
-                  type="checkbox"
-                  className="co-casilla"
-                  checked={b.mostrar_en_matriz}
-                  onChange={(e) => cambiar('mostrar_en_matriz', e.target.checked)}
-                />
-                <span>
-                  Mostrar en la matriz
-                  <span className="co-texto-suave co-bloque">
-                    Se prende sola cuando tiene fecha de entrega o está en proceso.
-                  </span>
-                </span>
-              </label>
             )}
           </div>
         )}

@@ -60,7 +60,7 @@ test('matriz, alta, detalle y vistas sin problemas graves de accesibilidad', asy
   await revisar(page, '[role="dialog"]')
   await page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).click()
 
-  for (const vista of ['Proyectos', 'Configuración']) {
+  for (const vista of ['Configuración']) {
     await page.getByRole('button', { name: vista }).first().click()
     await expect(page.getByRole('dialog', { name: vista })).toBeVisible()
     await revisar(page, '[role="dialog"]')

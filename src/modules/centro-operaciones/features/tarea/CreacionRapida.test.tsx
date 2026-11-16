@@ -13,35 +13,45 @@ function dibujar({
 }: { conexion?: EstadoConexion; inicial?: EstadoCreacion; error?: string } = {}) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () =>
-      Response.json({
-        personas: [
-          { id: 'p1', nombre: 'Uno', iniciales: 'U' },
-          { id: 'p2', nombre: 'Dos', iniciales: 'D' },
-        ],
-        categorias: [
-          { id: 'c1', nombre: 'Mantenimiento de máquinas', tipo_aplica: 'interna' },
-          { id: 'c2', nombre: 'Impresión color', tipo_aplica: 'pedido' },
-        ],
-      }),
+    vi.fn(async (url: string) =>
+      Response.json(
+        String(url).includes('/pedidos')
+          ? [
+              {
+                id: 'ot1',
+                tipo: 'pedido',
+                titulo: 'Vinilo vidriera',
+                cliente: { nombre: 'Ana', telefono: null },
+              },
+            ]
+          : {
+              personas: [
+                { id: 'p1', nombre: 'Uno', iniciales: 'U' },
+                { id: 'p2', nombre: 'Dos', iniciales: 'D' },
+              ],
+              categorias: [
+                { id: 'c1', nombre: 'Mantenimiento de máquinas', tipo_aplica: 'interna' },
+                { id: 'c2', nombre: 'Impresión color', tipo_aplica: 'pedido' },
+              ],
+            },
+      ),
     ),
   )
   const onCerrar = vi.fn()
   const onGuardar = vi.fn()
-  // Pedidos ya cargados (para "Pedido relacionado"), como los trae la matriz.
+  // Órdenes de trabajo abiertas (para "Pedido relacionado").
   const qc = new QueryClient()
-  qc.setQueryData(['matriz'], {
-    tareas: [
+  qc.setQueryData(
+    ['pedidos'],
+    [
       {
         id: 'ot1',
         tipo: 'pedido',
         titulo: 'Vinilo vidriera',
         cliente: { nombre: 'Ana', telefono: null },
       },
-      { id: 'otra', tipo: 'interna', titulo: 'Ordenar depósito', cliente: null },
     ],
-    config: { umbrales: { nivel_5_horas: 2, nivel_3_horas: 24, nivel_2_horas: 72 } },
-  })
+  )
   render(
     <QueryClientProvider client={qc}>
       <ContextoConexion.Provider value={conexion}>
@@ -67,12 +77,20 @@ describe('CreacionRapida', () => {
     expect(screen.queryByLabelText('Seña')).not.toBeInTheDocument()
   })
 
-  it('no guarda sin título ni importancia', () => {
+  it('no guarda sin título', () => {
     const { onGuardar } = dibujar()
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
     expect(screen.getByText('Escribí un título')).toBeInTheDocument()
-    expect(screen.getByText('Elegí si es importante')).toBeInTheDocument()
     expect(onGuardar).not.toHaveBeenCalled()
+  })
+
+  it('importancia y urgencia con sliders de 0 a 10, y muestra el cuadrante', () => {
+    dibujar()
+    expect(screen.getByText('No importante y no urgente')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/^Importancia/), { target: { value: '8' } })
+    fireEvent.change(screen.getByLabelText(/^Urgencia/), { target: { value: '6' } })
+    expect(screen.getByLabelText(/^Importancia/)).toHaveAccessibleName('Importancia: 8 (sí)')
+    expect(screen.getByText('Importante y urgente')).toBeInTheDocument()
   })
 
   it('entrega el alta con su versión provisoria para la matriz', async () => {
@@ -80,8 +98,7 @@ describe('CreacionRapida', () => {
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Vinilo vidriera' } })
     fireEvent.click(await screen.findByRole('button', { name: 'Dos' }))
     fireEvent.click(screen.getByRole('button', { name: '+2 h' }))
-    const importante = screen.getByRole('radiogroup', { name: 'Importante' })
-    fireEvent.click(within(importante).getByRole('radio', { name: 'Sí' }))
+    fireEvent.change(screen.getByLabelText(/^Importancia/), { target: { value: '9' } })
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
 
     expect(onGuardar).toHaveBeenCalledTimes(1)
@@ -90,9 +107,9 @@ describe('CreacionRapida', () => {
       tarea: {
         titulo: 'Vinilo vidriera',
         tipo: 'interna',
-        importante: true,
-        // "Urgente: Por fecha": la urgencia queda automática.
-        urgencia_manual: null,
+        nivel_importancia: 9,
+        // Sin tocar: arranca en 5 ("no").
+        nivel_urgencia: 5,
         // 14:20 + 2 h → 16:30 en Buenos Aires.
         fecha_entrega: '2026-11-06T19:30:00.000Z',
       },
@@ -111,7 +128,7 @@ describe('CreacionRapida', () => {
 
   it('tras un rechazo reabre con lo cargado y el motivo', () => {
     dibujar({
-      inicial: { b: { ...borradorVacio(), titulo: 'Folletos', importante: false }, subtareas: [] },
+      inicial: { b: { ...borradorVacio(), titulo: 'Folletos' }, subtareas: [] },
       error: 'Datos inválidos',
     })
     expect(screen.getByLabelText('Título')).toHaveValue('Folletos')
@@ -139,23 +156,19 @@ describe('CreacionRapida', () => {
     fireEvent.change(categoria, { target: { value: 'c1' } })
     // Solo pedidos (órdenes de trabajo) para relacionar.
     const pedido = screen.getByLabelText('Pedido relacionado')
-    expect(within(pedido).queryByRole('option', { name: /Ordenar depósito/ })).toBeNull()
+    expect(within(pedido).getByRole('option', { name: /Vinilo vidriera/ })).toBeInTheDocument()
     fireEvent.change(pedido, { target: { value: 'ot1' } })
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Comprar vinilo' } })
-    const importante = screen.getByRole('radiogroup', { name: 'Importante' })
-    fireEvent.click(within(importante).getByRole('radio', { name: 'No' }))
-    // Urgente "Sí" sin fecha: urgencia 3 (urgente).
-    const urgente = screen.getByRole('radiogroup', { name: 'Urgente' })
-    fireEvent.click(within(urgente).getByRole('radio', { name: 'Sí' }))
+    fireEvent.change(screen.getByLabelText(/^Urgencia/), { target: { value: '10' } })
     fireEvent.click(screen.getByRole('button', { name: 'Crear tarea' }))
 
     expect(onGuardar.mock.calls[0]![0].cuerpo.tarea).toMatchObject({
       tipo: 'interna',
       categoria_id: 'c1',
       pedido_id: 'ot1',
-      importante: false,
-      urgencia_manual: 3,
+      nivel_importancia: 5,
+      nivel_urgencia: 10,
     })
   })
 })

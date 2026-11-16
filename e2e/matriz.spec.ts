@@ -18,13 +18,14 @@ test.describe('matriz', () => {
     await expect(cuadrante(page, 'eliminar').getByText('Pedido de resmas')).toBeVisible()
   })
 
-  test('disposición: urgente a la derecha, importante arriba', async ({ page }) => {
+  test('disposición pedida: importante y urgente arriba a la izquierda', async ({ page }) => {
+    // De izquierda a derecha y de arriba a abajo: hacer, planificar, delegar, eliminar.
     const caja = async (id: string) => (await cuadrante(page, id).boundingBox())!
     const [hacer, planificar, delegar, eliminar] = await Promise.all(
       ['hacer', 'planificar', 'delegar', 'eliminar'].map(caja),
     )
-    expect(hacer.x).toBeGreaterThan(planificar.x)
-    expect(delegar.x).toBeGreaterThan(eliminar.x)
+    expect(hacer.x).toBeLessThan(planificar.x)
+    expect(delegar.x).toBeLessThan(eliminar.x)
     expect(hacer.y).toBeLessThan(delegar.y)
     expect(planificar.y).toBeLessThan(eliminar.y)
   })
@@ -45,7 +46,7 @@ test.describe('matriz', () => {
 
   test('ampliar un cuadrante y volver con Esc', async ({ page }) => {
     await cuadrante(page, 'hacer')
-      .getByRole('button', { name: /^Urgente e importante/ })
+      .getByRole('button', { name: /^Importante y urgente/ })
       .click()
     await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()
     await page.keyboard.press('Escape')
@@ -54,7 +55,7 @@ test.describe('matriz', () => {
 
   test('con muchas tareas achica los globos y muestra "+N"', async ({ page }) => {
     await page.goto('/?demo=muchas')
-    const mas = page.getByRole('button', { name: /tareas más en Urgente e importante/ })
+    const mas = page.getByRole('button', { name: /tareas más en Importante y urgente/ })
     await expect(mas).toBeVisible()
     await mas.click()
     await expect(page.getByRole('button', { name: 'Volver' })).toBeVisible()

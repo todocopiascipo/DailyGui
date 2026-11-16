@@ -1,19 +1,15 @@
 import {
   aspectoDe,
   compararParaCuadrante,
-  cuadranteDe,
-  esUrgente,
-  urgenciaEfectiva,
-  urgenciaEstimada,
+  cuadranteDeNiveles,
   type Cuadrante as IdCuadrante,
 } from '../../lib/urgencia'
 import type { ItemMatriz } from './Cuadrante'
-import type { ConfigMatriz, TareaMatriz } from './tipos'
+import type { TareaMatriz } from './tipos'
 
 /** Ubica cada tarea en su cuadrante, con su aspecto, ordenadas por prioridad. */
 export function agruparPorCuadrante(
   tareas: TareaMatriz[],
-  config: ConfigMatriz,
   ahora: Date,
 ): Record<IdCuadrante, ItemMatriz[]> {
   const grupos: Record<
@@ -27,13 +23,12 @@ export function agruparPorCuadrante(
   }
   for (const tarea of tareas) {
     const entrega = tarea.fecha_entrega ? new Date(tarea.fecha_entrega) : null
-    const estimada = urgenciaEstimada(entrega, ahora, config.umbrales)
-    const efectiva = urgenciaEfectiva(tarea.urgencia_manual, estimada)
-    const cuadrante = cuadranteDe(tarea.importante, esUrgente(efectiva))
-    grupos[cuadrante].push({
+    const importancia = tarea.nivel_importancia
+    const urgencia = tarea.nivel_urgencia
+    grupos[cuadranteDeNiveles(importancia, urgencia)].push({
       tarea,
-      aspecto: aspectoDe({ estado: tarea.estado, entrega, efectiva, ahora }),
-      orden: { efectiva, entrega },
+      aspecto: aspectoDe({ estado: tarea.estado, entrega, urgencia, ahora }),
+      orden: { importancia, urgencia, entrega },
     })
   }
   const resultado = {} as Record<IdCuadrante, ItemMatriz[]>

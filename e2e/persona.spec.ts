@@ -28,10 +28,6 @@ test('sin persona elegida, crear pide "¿Quién soy?" y queda como autora', asyn
   // Elegida la persona, sigue con lo que se quería hacer.
   const alta = page.getByRole('dialog', { name: 'Nueva tarea' })
   await alta.getByLabel('Título').fill(titulo)
-  await alta
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'No' })
-    .click()
   await alta.getByRole('button', { name: 'Crear tarea' }).click()
 
   await page.getByRole('button', { name: `Abrir ${titulo}` }).click()

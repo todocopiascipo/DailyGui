@@ -578,3 +578,8 @@
   opacity: 0.75;
   border-style: dashed;
 }
+/* Sliders 0-10 (Fase 12): de 6 en adelante es "sí". */
+.co-slider__marcas [data-alto] {
+  color: var(--co-blanco);
+  font-weight: 700;
+}

@@ -1,170 +1,96 @@
 import {
   aspectoDe,
   compararParaCuadrante,
-  cuadranteDe,
-  esUrgente,
+  cuadranteDeNiveles,
+  DISPOSICION_POR_DEFECTO,
   movimiento,
-  urgenciaElegida,
-  UMBRALES_POR_DEFECTO,
-  urgenciaEfectiva,
-  urgenciaEstimada,
-  type Nivel,
 } from './urgencia'
 
-// Buenos Aires es UTC-3 todo el año. "Ahora": viernes 6/11/2026 a las 14:00.
-const ahora = new Date('2026-11-06T14:00:00-03:00')
-const en = (horas: number) => new Date(ahora.getTime() + horas * 3_600_000)
+// Jueves 12/11/2026, 10:00 en Buenos Aires.
+const ahora = new Date('2026-11-12T13:00:00Z')
 
-describe('urgenciaEstimada', () => {
-  it('sin fecha es 1', () => {
-    expect(urgenciaEstimada(null, ahora)).toBe(1)
+describe('cuadrante por niveles (0-10)', () => {
+  it('de 0 a 5 es "no"; de 6 a 10, "sí"', () => {
+    expect(cuadranteDeNiveles(6, 6)).toBe('hacer')
+    expect(cuadranteDeNiveles(10, 5)).toBe('planificar')
+    expect(cuadranteDeNiveles(5, 10)).toBe('delegar')
+    expect(cuadranteDeNiveles(0, 0)).toBe('eliminar')
   })
-  it('vencida es 5', () => {
-    expect(urgenciaEstimada(en(-0.5), ahora)).toBe(5)
-    expect(urgenciaEstimada(en(-48), ahora)).toBe(5)
-  })
-  it('vence en 2 h o menos es 5', () => {
-    expect(urgenciaEstimada(en(2), ahora)).toBe(5)
-    expect(urgenciaEstimada(en(1), ahora)).toBe(5)
-  })
-  it('vence hoy (más de 2 h) es 4', () => {
-    expect(urgenciaEstimada(new Date('2026-11-06T20:00:00-03:00'), ahora)).toBe(4)
-    expect(urgenciaEstimada(new Date('2026-11-06T23:59:00-03:00'), ahora)).toBe(4)
-  })
-  it('mañana dentro de 24 h es 3', () => {
-    expect(urgenciaEstimada(new Date('2026-11-07T00:30:00-03:00'), ahora)).toBe(3)
-    expect(urgenciaEstimada(en(24), ahora)).toBe(3)
-  })
-  it('dentro de 72 h es 2', () => {
-    expect(urgenciaEstimada(en(25), ahora)).toBe(2)
-    expect(urgenciaEstimada(en(72), ahora)).toBe(2)
-  })
-  it('más de 72 h es 1', () => {
-    expect(urgenciaEstimada(en(73), ahora)).toBe(1)
-  })
-  it('usa el día calendario de Buenos Aires, no el de UTC', () => {
-    // 22:00 en BA ya es el día siguiente en UTC: sigue siendo "hoy".
-    const tarde = new Date('2026-11-06T18:00:00-03:00')
-    expect(urgenciaEstimada(new Date('2026-11-06T22:30:00-03:00'), tarde)).toBe(4)
-  })
-  it('respeta umbrales configurados', () => {
-    const umbrales = { nivel_5_horas: 4, nivel_3_horas: 48, nivel_2_horas: 96 }
-    expect(urgenciaEstimada(en(3), ahora, umbrales)).toBe(5)
-    expect(urgenciaEstimada(en(40), ahora, umbrales)).toBe(3)
-    expect(urgenciaEstimada(en(90), ahora, umbrales)).toBe(2)
+
+  it('orden pedido: importante y urgente arriba a la izquierda', () => {
+    expect(DISPOSICION_POR_DEFECTO).toEqual({
+      arriba_izquierda: 'hacer',
+      arriba_derecha: 'planificar',
+      abajo_izquierda: 'delegar',
+      abajo_derecha: 'eliminar',
+    })
   })
 })
 
-describe('urgenciaEfectiva', () => {
-  it('manda la manual', () => {
-    expect(urgenciaEfectiva(2, 5)).toBe(2)
-    expect(urgenciaEfectiva(5, 1)).toBe(5)
+describe('orden dentro del cuadrante', () => {
+  const t = (importancia: number, urgencia: number, entrega: string | null = null) => ({
+    importancia,
+    urgencia,
+    entrega: entrega ? new Date(entrega) : null,
   })
-  it('sin manual usa la estimada', () => {
-    expect(urgenciaEfectiva(null, 4)).toBe(4)
+
+  it('mayor suma primero; si empatan, la entrega más cercana (sin fecha al final)', () => {
+    const lista = [
+      { n: 'a', o: t(6, 6) },
+      { n: 'b', o: t(10, 9) },
+      { n: 'c', o: t(7, 5, '2026-11-13T12:00:00Z') },
+      { n: 'd', o: t(8, 4, '2026-11-12T20:00:00Z') },
+    ]
+    lista.sort((x, y) => compararParaCuadrante(x.o, y.o))
+    expect(lista.map((x) => x.n)).toEqual(['b', 'd', 'c', 'a'])
   })
 })
 
-describe('cuadrantes', () => {
-  it('urgente desde 3', () => {
-    expect(esUrgente(2)).toBe(false)
-    expect(esUrgente(3)).toBe(true)
+describe('mover de cuadrante', () => {
+  it('ajusta cada nivel lo mínimo para quedar del lado correcto', () => {
+    expect(movimiento({ nivel_importancia: 3, nivel_urgencia: 2 }, 'hacer')).toEqual({
+      nivel_importancia: 6,
+      nivel_urgencia: 6,
+    })
+    expect(movimiento({ nivel_importancia: 9, nivel_urgencia: 8 }, 'eliminar')).toEqual({
+      nivel_importancia: 5,
+      nivel_urgencia: 5,
+    })
+    // Solo cambia lo que hace falta.
+    expect(movimiento({ nivel_importancia: 9, nivel_urgencia: 2 }, 'hacer')).toEqual({
+      nivel_importancia: 9,
+      nivel_urgencia: 6,
+    })
   })
-  it('combina importancia y urgencia', () => {
-    expect(cuadranteDe(true, true)).toBe('hacer')
-    expect(cuadranteDe(true, false)).toBe('planificar')
-    expect(cuadranteDe(false, true)).toBe('delegar')
-    expect(cuadranteDe(false, false)).toBe('eliminar')
+
+  it('si ya está en ese cuadrante, no cambia nada', () => {
+    expect(movimiento({ nivel_importancia: 7, nivel_urgencia: 7 }, 'hacer')).toBeNull()
   })
 })
 
-describe('aspectoDe', () => {
-  const base = { estado: 'pendiente' as const, ahora }
-  it('terminada es azul aunque esté vencida', () => {
-    expect(aspectoDe({ ...base, estado: 'terminada', entrega: en(-5), efectiva: 5 })).toBe(
-      'terminada',
+describe('aspecto', () => {
+  const base = { estado: 'pendiente' as const, entrega: null, ahora }
+  it('por urgencia, sin fecha', () => {
+    expect(aspectoDe({ ...base, urgencia: 3 })).toBe('neutro')
+    expect(aspectoDe({ ...base, urgencia: 6 })).toBe('media')
+    expect(aspectoDe({ ...base, urgencia: 8 })).toBe('alta')
+    expect(aspectoDe({ ...base, urgencia: 10 })).toBe('muy_alta')
+  })
+
+  it('la fecha sigue marcando "hoy" y "vencida" (sin mover de cuadrante)', () => {
+    expect(aspectoDe({ ...base, urgencia: 0, entrega: new Date('2026-11-12T20:00:00Z') })).toBe(
+      'dia_entrega',
     )
-  })
-  it('vencida gana a en espera', () => {
-    expect(aspectoDe({ ...base, estado: 'en_espera', entrega: en(-1), efectiva: 5 })).toBe(
+    expect(aspectoDe({ ...base, urgencia: 0, entrega: new Date('2026-11-12T12:00:00Z') })).toBe(
       'vencida',
     )
-  })
-  it('en espera', () => {
-    expect(aspectoDe({ ...base, estado: 'en_espera', entrega: en(30), efectiva: 2 })).toBe(
-      'en_espera',
-    )
-  })
-  it('día de entrega', () => {
-    expect(aspectoDe({ ...base, entrega: en(3), efectiva: 4 })).toBe('dia_entrega')
-    // aunque la urgencia manual la haya bajado
-    expect(aspectoDe({ ...base, entrega: en(3), efectiva: 1 })).toBe('dia_entrega')
-  })
-  it('por nivel de urgencia', () => {
-    expect(aspectoDe({ ...base, entrega: en(100), efectiva: 5 })).toBe('muy_alta')
-    expect(aspectoDe({ ...base, entrega: en(100), efectiva: 4 })).toBe('alta')
-    expect(aspectoDe({ ...base, entrega: en(20), efectiva: 3 })).toBe('media')
-    expect(aspectoDe({ ...base, entrega: en(50), efectiva: 2 })).toBe('neutro')
-    expect(aspectoDe({ ...base, entrega: null, efectiva: 1 })).toBe('neutro')
-  })
-})
-
-describe('compararParaCuadrante', () => {
-  it('ordena por urgencia y después por entrega más cercana; sin fecha al final', () => {
-    const items: { id: string; efectiva: Nivel; entrega: Date | null }[] = [
-      { id: 'a', efectiva: 3, entrega: en(20) },
-      { id: 'b', efectiva: 5, entrega: en(1) },
-      { id: 'c', efectiva: 3, entrega: en(10) },
-      { id: 'd', efectiva: 3, entrega: null },
-    ]
-    expect(items.sort(compararParaCuadrante).map((i) => i.id)).toEqual(['b', 'c', 'a', 'd'])
-  })
-})
-
-describe('movimiento entre cuadrantes', () => {
-  const ahora = new Date('2026-11-06T10:00:00-03:00')
-  const sinFecha = { importante: true, urgencia_manual: null, fecha_entrega: null }
-
-  it('en el mismo cuadrante no cambia nada', () => {
-    expect(movimiento(sinFecha, 'planificar', UMBRALES_POR_DEFECTO, ahora)).toBeNull()
-  })
-
-  it('a urgente: urgencia al menos 3; a no urgente: como mucho 2', () => {
-    expect(movimiento(sinFecha, 'hacer', UMBRALES_POR_DEFECTO, ahora)).toEqual({
-      importante: true,
-      urgencia_manual: 3,
-    })
-    // Vence hoy (4): a "no urgente" baja a 2.
-    const hoy = {
-      importante: true,
-      urgencia_manual: null,
-      fecha_entrega: '2026-11-06T18:00:00-03:00',
-    }
-    expect(movimiento(hoy, 'planificar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
-      importante: true,
-      urgencia_manual: 2,
-    })
-    // Ya urgente (4) y cambia solo de fila: conserva su urgencia.
-    expect(movimiento(hoy, 'delegar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
-      importante: false,
-      urgencia_manual: 4,
-    })
-  })
-
-  it('la fila de destino define la importancia', () => {
-    expect(movimiento(sinFecha, 'eliminar', UMBRALES_POR_DEFECTO, ahora)).toEqual({
-      importante: false,
-      urgencia_manual: 1,
-    })
-  })
-})
-
-describe('urgente elegido en el formulario', () => {
-  const ahora = new Date('2026-11-06T10:00:00-03:00')
-  it('por fecha deja la automática; sí / no la fijan', () => {
-    expect(urgenciaElegida(null, null, ahora)).toBeNull()
-    expect(urgenciaElegida(true, null, ahora)).toBe(3)
-    expect(urgenciaElegida(false, new Date('2026-11-06T11:00:00-03:00'), ahora)).toBe(2)
-    expect(urgenciaElegida(true, new Date('2026-11-06T11:00:00-03:00'), ahora)).toBe(5)
+    expect(
+      aspectoDe({
+        ...base,
+        estado: 'terminada',
+        urgencia: 0,
+        entrega: new Date('2026-11-12T12:00:00Z'),
+      }),
+    ).toBe('terminada')
   })
 })

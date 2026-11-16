@@ -87,10 +87,10 @@ const CONFIGURACION: Record<string, unknown> = {
   // Urgencia estimada (sección 6.1). El nivel 4 es "vence hoy" (mismo día calendario).
   umbrales_urgencia: { nivel_5_horas: 2, nivel_3_horas: 24, nivel_2_horas: 72 },
   disposicion_cuadrantes: {
-    arriba_izquierda: 'planificar',
-    arriba_derecha: 'hacer',
-    abajo_izquierda: 'eliminar',
-    abajo_derecha: 'delegar',
+    arriba_izquierda: 'hacer',
+    arriba_derecha: 'planificar',
+    abajo_izquierda: 'delegar',
+    abajo_derecha: 'eliminar',
   },
   plantilla_mensaje:
     'Hola {nombre}, tu trabajo "{trabajo}" ya está listo para retirar. Saldo pendiente: {saldo}.',

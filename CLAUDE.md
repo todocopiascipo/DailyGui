@@ -38,7 +38,7 @@ de tocar algo: ahí está todo lo que se decidió y por qué).
 
 ## Estado (al 2026-11-12)
 
-Hechas: Fases 0–11 (todas las del plan) y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
+Hechas: Fases 0–12 y los pedidos extra del usuario (ver `docs/DECISIONES.md`):
 matriz, crear/editar, tiempo real, arrastrar y soltar con tacho y papelera,
 OT con forma de la de papel, terminar/entregar/devolver, "Hechas hoy",
 "Copiar mensaje", "¿Quién soy?" con PIN, "Mis tareas"; "+" = tareas internas
@@ -52,9 +52,24 @@ abierta (Fase 10).
 Cierre (Fase 11): accesibilidad revisada con axe (`e2e/accesibilidad.spec.ts`),
 README completo, listo para Vercel sin desplegar.
 
-**Siguiente:** lo que pida el usuario. Lo "posterior" de la especificación
-(sección 14: Vercel, Web Push con la app cerrada, Gantt, concatenar tareas,
-roles, fidelización, edición sin conexión) solo con pedido explícito.
+**Rediseño pedido por el usuario (2026-11-16), en tres fases:**
+
+- **Fase 12 (hecha):** la matriz es solo de tareas; cuadrantes en el orden
+  Importante y urgente · Importante y no urgente · No importante y urgente · No
+  importante y no urgente; importancia y urgencia con sliders 0-10 (6-10 = "sí";
+  la urgencia NO cambia sola con la fecha); orden dentro del cuadrante por suma;
+  sin proyectos (tabla conservada); OT sin importancia/urgencia; `/pedidos`
+  lista las OT abiertas.
+- **Fase 13:** espacio "Órdenes de trabajo" (estilo comandas colgadas; al tocar
+  una, la OT completa a la izquierda y sus tareas a la derecha, con agregar
+  tareas). Sale del tender al marcarla Entregada.
+- **Fase 14:** tareas encadenadas en columnas (1.º orden = sin dependencias); se
+  enlazan manteniendo una sobre otra (barra de ~2 s); una tarea puede esperar a
+  varias; en la matriz se ven atenuadas con "espera a…" hasta que se termine la
+  anterior.
+
+Esperar la aprobación del usuario antes de cada fase. Lo "posterior" de la
+especificación (Vercel, Web Push, roles, etc.) solo con pedido explícito.
 
 Advisors de Supabase: los avisos "anon/authenticated puede ejecutar SECURITY
 DEFINER" y "RLS sin políticas" en `privado.*` son intencionales (acceso por

@@ -25,44 +25,46 @@ Levanta el servidor de datos y la app. En esta PC: http://localhost:5173.
 Desde el iPad o el monitor: la dirección "Network" que aparece en la consola
 (por ejemplo `http://192.168.0.208:5173`), dentro de la red del local.
 
-En la matriz:
+En la matriz (solo tareas; las órdenes de trabajo van aparte):
 
-- **Tarea interna:** tecla `N` o el botón `+` casi transparente abajo al
-  centro (en el celular, abajo a la derecha). Formulario simple: título,
-  responsables, entrega, importante, urgente (sí, no o según la fecha),
-  categoría y, si es para un pedido, la orden de trabajo relacionada.
+- **Cuadrantes**, de izquierda a derecha y de arriba a abajo: Importante y
+  urgente · Importante y no urgente · No importante y urgente · No importante y
+  no urgente.
+- **Tarea:** tecla `N` o el botón `+` casi transparente abajo al centro (en el
+  celular, abajo a la derecha). Título, responsables, entrega, **importancia y
+  urgencia con dos sliders de 0 a 10** (de 6 en adelante es "sí"; el formulario
+  muestra a qué cuadrante va), categoría y, si es para un pedido, la orden de
+  trabajo relacionada. La urgencia es la que se elige: la fecha de entrega no la
+  cambia (solo se marca "vence hoy" o "vencida"). Dentro de cada cuadrante,
+  arriba las de mayor importancia + urgencia.
 - **Orden de trabajo (pedido):** tecla `O` o el botón `OT`, al lado del `+`.
-  Tiene la forma de la OT de papel; la primera línea del detalle es el título
-  y las fechas van al final.
+  Tiene la forma de la OT de papel (sin importancia ni urgencia); la primera
+  línea del detalle es el título y las fechas van al final. No aparece en la
+  matriz: su espacio propio llega en la Fase 13 (mientras tanto, se abre desde
+  "Hechas hoy", el Historial o la tarea relacionada).
 - **Mover de cuadrante:** arrastrar el globo (en el iPad, mantener presionado y
-  arrastrar). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
+  arrastrar). Cada nivel se ajusta lo mínimo para quedar del lado correcto (por
+  ejemplo, urgencia 3 → 6). Para eliminar, soltarlo en el tacho que aparece abajo; se puede
   recuperar desde Configuración (engranaje abajo a la derecha) › Papelera
   durante 30 días. Después se borra solo.
 - **Ver y editar una tarea:** tocar su globo. Las subtareas se guardan al
   momento; el resto, con "Guardar cambios".
 - Las personas del equipo se agregan con "+ Persona" dentro del formulario.
-- **Terminar y entregar:** desde el menú de tres puntitos de cada globo (o el
-  detalle). Al terminar, la tarjeta queda azul con el botón "Entregada"; al
-  entregarla, sale de la matriz. El menú también tiene "Devolver al estado
-  anterior", "Copiar mensaje" (para WhatsApp) y "Copiar teléfono".
+- **Terminar:** desde el menú de tres puntitos de cada globo (o el detalle): la
+  tarea pasa a "Hechas hoy". Las órdenes de trabajo se terminan, se entregan y
+  tienen "Copiar mensaje" (WhatsApp) y "Copiar teléfono" en su detalle.
 - **¿Quién soy?:** abajo a la izquierda. Cada dispositivo recuerda quién lo
   usa; lo que se hace queda a su nombre en el historial. Con el ojo se
   resaltan sus tareas, y "Mis tareas" muestra qué hacer ahora, la línea del
   día y el paso a paso. El PIN es opcional.
-- **Proyectos:** botón "Proyectos" abajo a la izquierda. Lista de proyectos
-  internos con estado, responsable, fecha objetivo y avance; dentro de cada uno,
-  sus datos, sus tareas (nueva, abrir, terminar, subir o bajar) e historial.
-  Una tarea de proyecto aparece en la matriz sola cuando tiene fecha de entrega
-  o está en proceso; el botón de cuadrícula ("Mostrar en la matriz") lo cambia
-  a mano. Con el "+", el proyecto se elige en "Más datos".
 - **Herramientas (borde izquierdo):** acercando el mouse al borde izquierdo,
   con la pestaña casi transparente de ese borde o deslizando desde el borde
-  (iPad): crear tarea, OT, ¿Quién soy?, Mis tareas, Proyectos, Hechas hoy,
+  (iPad): crear tarea, OT, ¿Quién soy?, Mis tareas, Hechas hoy,
   Historial y Configuración.
 - **Historial:** todo lo que pasó, quién y cuándo. Se busca por texto y se
   filtra por persona, por fechas o por tarea (tocando su nombre).
 - **Configuración** (engranaje abajo a la derecha): personas, categorías,
-  urgencia y cuadrantes, confeti y mensaje, papelera (y cuántos días guarda) y
+  dónde va cada cuadrante, confeti y mensaje, papelera (y cuántos días guarda) y
   **Exportar respaldo** (descarga un archivo con todo, sin los PIN).
 - **Modo pantalla (monitor):** abrir la app con `?modo=pantalla` al final de
   la dirección (o Configuración › Este dispositivo). Letra más grande, pantalla
@@ -103,8 +105,7 @@ http://localhost:5173/?demo y http://localhost:5173/?demo=muchas.
   `GET|PATCH /api/tareas/:id`, `POST /api/tareas/:id/subtareas`,
   `PATCH|DELETE /api/subtareas/:id`, `GET /api/papelera`,
   `POST /api/tareas/:id/eliminar|restaurar|terminar|entregar|devolver`,
-  `GET /api/hechas?desde=`, `GET|POST /api/proyectos`,
-  `GET|PATCH|DELETE /api/proyectos/:id`, `PUT /api/proyectos/:id/orden`,
+  `GET /api/hechas?desde=`, `GET /api/pedidos` (órdenes de trabajo abiertas),
   `GET /api/personas`, `PATCH /api/personas/:id`, `PUT /api/personas/orden`,
   `GET|POST /api/categorias`, `PATCH /api/categorias/:id`,
   `PUT /api/categorias/orden`, `GET /api/historial?persona=&tarea=&desde=&hasta=&texto=&antes=`,
@@ -194,7 +195,7 @@ repositorio y se configura:
 
 Configuración › Respaldo › **Exportar respaldo** descarga un archivo
 `todocopias-respaldo-AAAA-MM-DD.json` con todas las tablas (personas, clientes,
-categorías, proyectos, tareas, responsables, subtareas, historial y
+categorías, tareas, responsables, subtareas, historial y
 configuración). Los PIN no se incluyen. Conviene guardarlo una vez por semana
 fuera de la PC (por ejemplo, en Drive).
 
@@ -208,7 +209,7 @@ PNG.
 ## Accesibilidad y rendimiento
 
 - `e2e/accesibilidad.spec.ts` revisa con axe la matriz, los formularios, el
-  detalle, Proyectos, Configuración e Historial: sin problemas serios ni
+  detalle, Configuración e Historial: sin problemas serios ni
   críticos (WCAG 2.1 AA).
 - Carga inicial: unos 100 kB de código comprimido más estilos y fuentes.
-  Proyectos, Historial, Mis tareas y Configuración se cargan recién al abrirlos.
+  Historial, Mis tareas y Configuración se cargan recién al abrirlos.

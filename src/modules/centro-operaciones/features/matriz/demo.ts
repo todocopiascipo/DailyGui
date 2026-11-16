@@ -20,7 +20,14 @@ export function tareasDemo(ahora: Date = new Date()): TareaMatriz[] {
     datos: Partial<TareaMatriz> & Pick<TareaMatriz, 'titulo' | 'importante'>,
   ): TareaMatriz => ({
     id: `demo-${++n}`,
-    tipo: 'pedido' as const,
+    tipo: 'interna' as const,
+    // Niveles 0-10 de demostración: los da "importante" y lo cerca de la entrega.
+    nivel_importancia: datos.importante ? 8 : 3,
+    nivel_urgencia: datos.urgencia_manual
+      ? datos.urgencia_manual * 2
+      : datos.fecha_entrega && Date.parse(datos.fecha_entrega) - ahora.getTime() <= 24 * 3_600_000
+        ? 8
+        : 3,
     urgencia_manual: null,
     estado: 'pendiente' as const,
     estado_anterior: null,

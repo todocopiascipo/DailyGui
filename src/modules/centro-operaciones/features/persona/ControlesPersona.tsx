@@ -1,10 +1,9 @@
-import { Eye, EyeOff, FolderOpen, ListTodo, UserRound } from 'lucide-react'
+import { Eye, EyeOff, ListTodo, UserRound } from 'lucide-react'
 import type { PersonaBreve } from '../matriz/tipos'
 
 /**
  * Abajo a la izquierda, discreto: "¿Quién soy?" (o el nombre de la persona
- * activa), resaltar sus tareas (un toque lo apaga), "Mis tareas" y
- * "Proyectos" (decisión 11: la vista de proyectos se abre desde acá).
+ * activa), resaltar sus tareas (un toque lo apaga) y "Mis tareas".
  */
 export function ControlesPersona({
   persona,
@@ -12,14 +11,12 @@ export function ControlesPersona({
   onElegir,
   onResaltar,
   onMisTareas,
-  onProyectos,
 }: {
   persona: PersonaBreve | null
   resaltar: boolean
   onElegir: () => void
   onResaltar: () => void
   onMisTareas: () => void
-  onProyectos: () => void
 }) {
   return (
     <div className="co-persona-activa">
@@ -62,16 +59,6 @@ export function ControlesPersona({
           </button>
         </>
       )}
-      <button
-        type="button"
-        className="co-boton-redondo co-boton-redondo--texto"
-        aria-label="Proyectos"
-        title="Proyectos"
-        onClick={onProyectos}
-      >
-        <FolderOpen size={18} aria-hidden />
-        <span className="co-boton-redondo__texto">Proyectos</span>
-      </button>
     </div>
   )
 }

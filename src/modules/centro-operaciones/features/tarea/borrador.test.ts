@@ -12,7 +12,6 @@ import type { DetalleTarea } from './tipos'
 const lleno = (cambios: Partial<Borrador>): Borrador => ({
   ...borradorVacio(),
   titulo: 'Vinilo',
-  importante: true,
   ...cambios,
 })
 
@@ -32,6 +31,8 @@ const detalle: DetalleTarea = {
     saldo_medio: null,
     importante: true,
     urgencia_manual: null,
+    nivel_importancia: 0,
+    nivel_urgencia: 0,
     estado: 'pendiente',
     estado_anterior: null,
     motivo_espera: null,
@@ -70,11 +71,8 @@ describe('importes', () => {
 })
 
 describe('validar', () => {
-  it('pide título e importancia', () => {
-    expect(validar(borradorVacio())).toEqual({
-      titulo: 'Escribí un título',
-      importante: 'Elegí si es importante',
-    })
+  it('pide el título', () => {
+    expect(validar(borradorVacio())).toEqual({ titulo: 'Escribí un título' })
     expect(validar(lleno({}))).toEqual({})
   })
 
@@ -111,13 +109,14 @@ describe('cuerpo para la API', () => {
     )
     expect(c.tarea).toMatchObject({
       titulo: 'Vinilo',
-      importante: true,
       fecha_entrega: '2026-11-06T21:00:00.000Z',
       sena: 1000,
       saldo: 0,
     })
     expect(c.subtareas).toEqual([{ titulo: 'Cortar', responsable_id: null }])
     expect('cliente' in c).toBe(false)
+    // Las OT no tienen importancia ni urgencia (Fase 12).
+    expect('nivel_importancia' in c.tarea).toBe(false)
   })
 
   it('las tareas internas no llevan cliente ni importes', () => {
@@ -131,6 +130,8 @@ describe('cuerpo para la API', () => {
     )
     expect(c.tarea.sena).toBe(0)
     expect('cliente' in c).toBe(false)
+    // Arranca en 5 y 5: "no importante, no urgente", a un paso del "sí".
+    expect(c.tarea).toMatchObject({ nivel_importancia: 5, nivel_urgencia: 5 })
   })
 
   it('edición: sin cambios es null', () => {
@@ -138,10 +139,29 @@ describe('cuerpo para la API', () => {
   })
 
   it('edición: manda solo lo que cambió', () => {
-    const b = { ...borradorDe(detalle), urgencia_manual: 4, responsables: ['p1', 'p2'] }
+    const b = { ...borradorDe(detalle), titulo: 'Vinilo grande', responsables: ['p1', 'p2'] }
     expect(cuerpoEdicion(b, detalle)).toEqual({
-      cambios: { urgencia_manual: 4 },
+      cambios: { titulo: 'Vinilo grande' },
       responsables: ['p1', 'p2'],
+    })
+  })
+
+  it('edición de una tarea: los niveles viajan si cambian', () => {
+    const tarea: DetalleTarea = {
+      ...detalle,
+      cliente: null,
+      tarea: {
+        ...detalle.tarea,
+        tipo: 'interna',
+        cliente_id: null,
+        sena: 0,
+        nivel_importancia: 7,
+        nivel_urgencia: 3,
+      },
+    }
+    expect(cuerpoEdicion(borradorDe(tarea), tarea)).toBeNull()
+    expect(cuerpoEdicion({ ...borradorDe(tarea), nivel_urgencia: 9 }, tarea)).toEqual({
+      cambios: { nivel_urgencia: 9 },
     })
   })
 
@@ -159,39 +179,5 @@ describe('cuerpo para la API', () => {
   it('edición: borrar los datos del cliente lo quita', () => {
     const b = { ...borradorDe(detalle), cliente: { id: 'c1', nombre_apellido: '', telefono: '' } }
     expect(cuerpoEdicion(b, detalle)).toEqual({ cliente: null })
-  })
-})
-
-describe('proyectos (decisión 11)', () => {
-  const deProyecto: DetalleTarea = {
-    ...detalle,
-    cliente: null,
-    tarea: {
-      ...detalle.tarea,
-      tipo: 'interna',
-      cliente_id: null,
-      sena: 0,
-      proyecto_id: 'p1',
-      mostrar_en_matriz: false,
-    },
-  }
-
-  it('al crear, el proyecto viaja y el interruptor no (decide la regla automática)', () => {
-    const c = cuerpoNuevaTarea(lleno({ tipo: 'interna', proyecto_id: 'p1' }), [])
-    expect(c.tarea.proyecto_id).toBe('p1')
-    expect('mostrar_en_matriz' in c.tarea).toBe(false)
-    // Un pedido nunca lleva proyecto.
-    expect(cuerpoNuevaTarea(lleno({ proyecto_id: 'p1' }), []).tarea.proyecto_id).toBeNull()
-  })
-
-  it('al editar, el interruptor solo viaja si se tocó', () => {
-    const b = borradorDe(deProyecto)
-    expect(cuerpoEdicion(b, deProyecto)).toBeNull()
-    expect(cuerpoEdicion({ ...b, mostrar_en_matriz: true }, deProyecto)).toEqual({
-      cambios: { mostrar_en_matriz: true },
-    })
-    expect(cuerpoEdicion({ ...b, proyecto_id: '' }, deProyecto)).toEqual({
-      cambios: { proyecto_id: null },
-    })
   })
 })

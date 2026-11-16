@@ -33,6 +33,7 @@ export function rutaARpc(
     if (a === 'matriz') return rpc('co_matriz')
     if (a === 'catalogos') return rpc('co_catalogos')
     if (a === 'papelera') return rpc('co_papelera')
+    if (a === 'pedidos') return rpc('co_pedidos')
     if (a === 'clientes')
       return rpc('co_clientes', { p_telefono: url.searchParams.get('telefono') ?? '' })
     if (a === 'hechas') return rpc('co_hechas', { p_desde: url.searchParams.get('desde') })

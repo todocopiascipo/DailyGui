@@ -1,5 +1,5 @@
 import type { Enums } from '../../lib/database.types'
-import type { Disposicion, Umbrales } from '../../lib/urgencia'
+import type { Disposicion } from '../../lib/urgencia'
 
 export interface PersonaBreve {
   id: string
@@ -31,10 +31,9 @@ export interface TareaMatriz {
   cliente: { nombre: string; telefono: string | null } | null
   /** Tarea interna relacionada con un pedido (orden de trabajo). */
   pedido?: { id: string; titulo: string } | null
-  /** Proyecto interno al que pertenece (si tiene). */
-  proyecto?: { id: string; nombre: string } | null
-  /** Si aparece en la matriz (las tareas de proyecto pueden no aparecer). */
-  mostrar_en_matriz?: boolean
+  /** Importancia y urgencia de 0 a 10 (de 6 a 10 = "sí"). */
+  nivel_importancia: number
+  nivel_urgencia: number
   responsables: PersonaBreve[]
   subtareas: { total: number; hechas: number }
   /** Se está guardando (creación optimista): todavía no se puede abrir. */
@@ -42,7 +41,6 @@ export interface TareaMatriz {
 }
 
 export interface ConfigMatriz {
-  umbrales: Umbrales
   disposicion: Disposicion
   /** Confeti al terminar (configuracion.confeti_activado). */
   confeti: boolean

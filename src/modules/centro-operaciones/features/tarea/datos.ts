@@ -10,6 +10,11 @@ export function useCatalogos() {
   })
 }
 
+/** Órdenes de trabajo abiertas (las OT ya no están en la matriz). */
+export function usePedidos() {
+  return useQuery({ queryKey: ['pedidos'], queryFn: () => pedir<TareaMatriz[]>('/pedidos') })
+}
+
 export function useDetalle(id: string) {
   return useQuery({
     queryKey: ['tarea', id],
@@ -26,8 +31,7 @@ function useAlGuardar() {
   const qc = useQueryClient()
   return (d: DetalleTarea) => {
     qc.setQueryData(['tarea', d.tarea.id], d)
-    void qc.invalidateQueries({ queryKey: ['proyectos'] })
-    void qc.invalidateQueries({ queryKey: ['proyecto'] })
+    void qc.invalidateQueries({ queryKey: ['pedidos'] })
     return qc.invalidateQueries({ queryKey: ['matriz'] })
   }
 }

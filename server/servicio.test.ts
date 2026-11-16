@@ -67,7 +67,7 @@ describe('crearTarea', () => {
     const t = crearTarea(
       db,
       { persona: uno },
-      { titulo: 'Vinilo', importante: true },
+      { titulo: 'Vinilo', nivel_importancia: 8 },
       [uno],
       [{ titulo: 'Cortar', responsable_id: dos }],
     )
@@ -98,15 +98,10 @@ describe('crearTarea', () => {
 describe('actualizarTarea', () => {
   it('ciclo completo con estado anterior, marcas de tiempo e historial', () => {
     const hora = (m: number) => new Date(Date.UTC(2026, 10, 6, 15, m)).toISOString()
-    const t = crearTarea(
-      db,
-      { persona: uno, ahora: hora(0) },
-      { titulo: 'Vinilo', importante: true },
-    )
+    const t = crearTarea(db, { persona: uno, ahora: hora(0) }, { titulo: 'Vinilo', tipo: 'pedido' })
 
     actualizarTarea(db, { persona: dos, pista: 'movida_cuadrante', ahora: hora(1) }, t.id, {
-      importante: false,
-      urgencia_manual: 2,
+      descripcion: 'Más grande',
     })
     actualizarTarea(db, { persona: dos, ahora: hora(2) }, t.id, { estado: 'en_proceso' })
     const terminada = actualizarTarea(db, { persona: dos, ahora: hora(3) }, t.id, {
@@ -156,8 +151,7 @@ describe('actualizarTarea', () => {
       ['restaurada', uno],
     ])
     const movida = JSON.parse(eventos()[1]!.cambios)
-    expect(movida.importante).toEqual({ antes: true, despues: false })
-    expect(movida.urgencia_manual).toEqual({ antes: null, despues: 2 })
+    expect(movida.descripcion).toEqual({ antes: null, despues: 'Más grande' })
   })
 
   it('volver de terminada a en proceso borra terminada_at', () => {

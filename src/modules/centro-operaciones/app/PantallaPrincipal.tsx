@@ -1,7 +1,6 @@
 import {
   CheckCheck,
   FileText,
-  FolderOpen,
   History,
   ListTodo,
   Plus,
@@ -52,7 +51,6 @@ import { SinAcceso } from './SinAcceso'
 // Configuración se usa poco: se carga recién cuando se abre.
 const Configuracion = lazy(() => import('../features/configuracion/Configuracion'))
 const MisTareas = lazy(() => import('../features/mis-tareas/MisTareas'))
-const Proyectos = lazy(() => import('../features/proyectos/Proyectos'))
 const Historial = lazy(() => import('../features/historial/Historial'))
 
 /** No interceptar atajos mientras se escribe. */
@@ -66,8 +64,6 @@ interface Creacion {
   formulario: 'rapida' | 'ot'
   inicial?: EstadoCreacion
   error?: string
-  /** Tarea nueva dentro de un proyecto. */
-  proyectoId?: string
 }
 
 /** Aviso breve abajo; puede traer una acción ("Copiar mensaje"). */
@@ -115,7 +111,6 @@ export function PantallaPrincipal() {
   const [porConfirmar, setPorConfirmar] = useState<PorConfirmar | null>(null)
   const [configurando, setConfigurando] = useState(false)
   const [viendoMisTareas, setViendoMisTareas] = useState(false)
-  const [viendoProyectos, setViendoProyectos] = useState(false)
   const [viendoHistorial, setViendoHistorial] = useState(false)
   const [senalHechas, setSenalHechas] = useState(0)
   const catalogos = useCatalogos()
@@ -135,7 +130,6 @@ export function PantallaPrincipal() {
     setPorConfirmar(null)
     setConfigurando(false)
     setViendoMisTareas(false)
-    setViendoProyectos(false)
     setViendoHistorial(false)
     setEligiendo(null)
   })
@@ -153,7 +147,6 @@ export function PantallaPrincipal() {
     configurando ||
     eligiendo !== null ||
     viendoMisTareas ||
-    viendoProyectos ||
     viendoHistorial
 
   /**
@@ -164,10 +157,8 @@ export function PantallaPrincipal() {
     if (quien.identificado) accion()
     else setEligiendo({ motivo, despues: accion })
   }
-  const abrirAlta = (formulario: Creacion['formulario'], proyectoId?: string) =>
-    conPersona('Para crear una tarea, elegí quién sos.', () =>
-      setCreando({ formulario, proyectoId }),
-    )
+  const abrirAlta = (formulario: Creacion['formulario']) =>
+    conPersona('Para crear una tarea, elegí quién sos.', () => setCreando({ formulario }))
 
   // Los avisos se van solos.
   useEffect(() => {
@@ -180,20 +171,28 @@ export function PantallaPrincipal() {
   // Si el servidor la rechaza, el mismo formulario vuelve con lo cargado.
   const guardarNueva = (alta: AltaPedida, estado: EstadoCreacion) => {
     setCreando(null)
-    crear.mutateAsync(alta).catch((e: unknown) =>
-      setCreando({
-        formulario: estado.formulario ?? 'rapida',
-        proyectoId: estado.b.proyecto_id || undefined,
-        inicial: estado,
-        error: mensaje(e),
-      }),
-    )
+    crear
+      .mutateAsync(alta)
+      .then(() => {
+        // Las OT ya no van a la matriz (Fase 12): se avisa que quedó guardada.
+        if (estado.formulario === 'ot') {
+          setAviso({ tipo: 'ok', texto: `Orden de trabajo "${alta.provisoria.titulo}" guardada` })
+        }
+      })
+      .catch((e: unknown) =>
+        setCreando({
+          formulario: estado.formulario ?? 'rapida',
+          inicial: estado,
+          error: mensaje(e),
+        }),
+      )
   }
 
   const tareas = useMemo(() => {
     const reales = matriz.data?.tareas ?? []
     const nuevas = provisorias.filter(
-      (p) => p.mostrar_en_matriz !== false && !reales.some((t) => t.id === p.id),
+      // La matriz es solo de tareas: una OT que se está guardando no aparece.
+      (p) => p.tipo === 'interna' && !reales.some((t) => t.id === p.id),
     )
     return aplicarEnCurso(nuevas.length > 0 ? [...reales, ...nuevas] : reales)
   }, [matriz.data, provisorias, aplicarEnCurso])
@@ -311,7 +310,7 @@ export function PantallaPrincipal() {
 
   const soltar = useCallback(
     (id: string, destino: Destino, origen: Origen) => {
-      const { tareas, hechas, matriz, ahora, conectado, devolver, pedirEliminar } = actual.current
+      const { tareas, hechas, matriz, conectado, devolver, pedirEliminar } = actual.current
       if (!conectado) {
         setAviso({ tipo: 'error', texto: 'Sin conexión: no se puede guardar hasta que vuelva.' })
         return
@@ -325,7 +324,7 @@ export function PantallaPrincipal() {
       // Del panel "Hechas hoy" a la matriz: vuelve a su estado anterior.
       if (origen === 'panel') return devolver(tarea)
       if (!matriz) return
-      const cambio = movimiento(tarea, destino.id, matriz.config.umbrales, ahora)
+      const cambio = movimiento(tarea, destino.id)
       if (!cambio) return
       mover
         .mutateAsync({ id, ...cambio })
@@ -370,7 +369,6 @@ export function PantallaPrincipal() {
     error: creando?.error,
     onGuardar: guardarNueva,
     onCerrar: () => setCreando(null),
-    proyectoId: creando?.proyectoId,
   }
   // Menú del borde (especificación 7.10): todo a mano, en un solo lugar.
   const herramientas: Herramienta[] = [
@@ -399,12 +397,6 @@ export function PantallaPrincipal() {
           },
         ]
       : []),
-    {
-      id: 'proyectos',
-      texto: 'Proyectos',
-      icono: FolderOpen,
-      hacer: () => setViendoProyectos(true),
-    },
     {
       id: 'hechas',
       texto: 'Hechas hoy',
@@ -464,7 +456,6 @@ export function PantallaPrincipal() {
               onElegir={() => setEligiendo({})}
               onResaltar={() => quien.setResaltar(!quien.resaltar)}
               onMisTareas={() => setViendoMisTareas(true)}
-              onProyectos={() => setViendoProyectos(true)}
             />
             <IndicadorConexion estado={conexion} />
             {aviso && (
@@ -500,16 +491,6 @@ export function PantallaPrincipal() {
               />
             </Suspense>
           )}
-          {viendoProyectos && (
-            <Suspense fallback={null}>
-              <Proyectos
-                ahora={ahora}
-                onAbrirTarea={setAbierta}
-                onCrearTarea={(id) => abrirAlta('rapida', id)}
-                onCerrar={() => setViendoProyectos(false)}
-              />
-            </Suspense>
-          )}
           {creando?.formulario === 'rapida' && <CreacionRapida {...propsFormulario} />}
           {creando?.formulario === 'ot' && <OrdenDeTrabajo {...propsFormulario} />}
           {abierta && (
@@ -517,7 +498,6 @@ export function PantallaPrincipal() {
               key={abierta}
               id={abierta}
               ahora={ahora}
-              umbrales={matriz.data.config.umbrales}
               onCerrar={() => setAbierta(null)}
               onAccion={ejecutar}
               onAbrirOtra={setAbierta}

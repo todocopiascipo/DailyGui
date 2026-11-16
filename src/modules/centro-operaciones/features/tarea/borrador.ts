@@ -6,7 +6,9 @@ import type { Enums } from '../../lib/database.types'
 import { aFechaHora, aIso, SIN_FECHA, type FechaHora } from '../../lib/fechas'
 import type { PersonaBreve, TareaMatriz } from '../matriz/tipos'
 import type { DetalleTarea } from './tipos'
-import { urgenciaElegida, type Umbrales } from '../../lib/urgencia'
+
+/** Nivel con el que arranca una tarea nueva: 5 = "no", a un paso del "sí". */
+export const NIVEL_INICIAL = 5
 
 export interface BorradorCliente {
   /** Cliente existente vinculado (null = nuevo). */
@@ -23,10 +25,9 @@ export interface Borrador {
   responsables: string[]
   entrega: FechaHora
   inicio: FechaHora
-  importante: boolean | null
-  /** Al crear: urgente sí / no, o null = según la fecha de entrega. */
-  urgente: boolean | null
-  urgencia_manual: number | null
+  /** Importancia y urgencia de 0 a 10 (solo tareas; de 6 a 10 = "sí"). */
+  nivel_importancia: number
+  nivel_urgencia: number
   estado: Enums<'estado_tarea'>
   motivo_espera: Enums<'motivo_espera'> | null
   motivo_espera_detalle: string
@@ -38,10 +39,6 @@ export interface Borrador {
   categoria_id: string
   /** Pedido (OT) con el que se relaciona una tarea interna ('' = ninguno). */
   pedido_id: string
-  /** Proyecto interno al que pertenece ('' = ninguno). */
-  proyecto_id: string
-  /** Solo para tareas de proyecto: el interruptor "Mostrar en la matriz". */
-  mostrar_en_matriz: boolean
   descripcion: string
 }
 
@@ -54,9 +51,8 @@ export function borradorVacio(): Borrador {
     responsables: [],
     entrega: SIN_FECHA,
     inicio: SIN_FECHA,
-    importante: null,
-    urgente: null,
-    urgencia_manual: null,
+    nivel_importancia: NIVEL_INICIAL,
+    nivel_urgencia: NIVEL_INICIAL,
     estado: 'pendiente',
     motivo_espera: null,
     motivo_espera_detalle: '',
@@ -67,8 +63,6 @@ export function borradorVacio(): Borrador {
     saldo_medio: null,
     categoria_id: '',
     pedido_id: '',
-    proyecto_id: '',
-    mostrar_en_matriz: true,
     descripcion: '',
   }
 }
@@ -83,9 +77,8 @@ export function borradorDe(d: DetalleTarea): Borrador {
     responsables: d.responsables.map((p) => p.id),
     entrega: aFechaHora(t.fecha_entrega),
     inicio: aFechaHora(t.fecha_inicio),
-    importante: t.importante,
-    urgente: null,
-    urgencia_manual: t.urgencia_manual,
+    nivel_importancia: t.nivel_importancia,
+    nivel_urgencia: t.nivel_urgencia,
     estado: t.estado,
     motivo_espera: t.motivo_espera,
     motivo_espera_detalle: t.motivo_espera_detalle ?? '',
@@ -102,17 +95,12 @@ export function borradorDe(d: DetalleTarea): Borrador {
     saldo_medio: t.saldo_medio,
     categoria_id: t.categoria_id ?? '',
     pedido_id: t.pedido_id ?? '',
-    proyecto_id: t.proyecto_id ?? '',
-    mostrar_en_matriz: t.mostrar_en_matriz,
     descripcion: t.descripcion ?? '',
   }
 }
 
 export type Errores = Partial<
-  Record<
-    'titulo' | 'importante' | 'entrega' | 'inicio' | 'motivo' | 'cliente' | 'sena' | 'saldo',
-    string
-  >
+  Record<'titulo' | 'entrega' | 'inicio' | 'motivo' | 'cliente' | 'sena' | 'saldo', string>
 >
 
 /** Acepta "1500", "1.500", "1500,50", "1.500,50" y "1500.5". Vacío = 0. */
@@ -138,7 +126,6 @@ const tieneCliente = (c: BorradorCliente) =>
 export function validar(b: Borrador): Errores {
   const e: Errores = {}
   if (b.titulo.trim() === '') e.titulo = 'Escribí un título'
-  if (b.importante === null) e.importante = 'Elegí si es importante'
   const entrega = fechaIncompleta(b.entrega)
   if (entrega) e.entrega = entrega
   const inicio = fechaIncompleta(b.inicio)
@@ -170,13 +157,12 @@ function camposTarea(b: Borrador) {
     descripcion: b.descripcion.trim() || null,
     categoria_id: b.categoria_id || null,
     pedido_id: b.tipo === 'interna' ? b.pedido_id || null : null,
-    proyecto_id: b.tipo === 'interna' ? b.proyecto_id || null : null,
     sena: pedido ? (leerImporte(b.sena) ?? 0) : 0,
     saldo: pedido ? (leerImporte(b.saldo) ?? 0) : 0,
     sena_medio: pedido ? b.sena_medio : null,
     saldo_medio: pedido ? b.saldo_medio : null,
-    importante: b.importante ?? false,
-    urgencia_manual: b.urgencia_manual,
+    // Solo las tareas tienen importancia y urgencia (las OT no).
+    ...(pedido ? {} : { nivel_importancia: b.nivel_importancia, nivel_urgencia: b.nivel_urgencia }),
     estado: b.estado,
     motivo_espera: b.estado === 'en_espera' ? b.motivo_espera : null,
     motivo_espera_detalle:
@@ -229,8 +215,10 @@ export function tareaProvisoria(
     provisoria: true,
     tipo: c.tipo,
     titulo: c.titulo,
-    importante: c.importante,
-    urgencia_manual: c.urgencia_manual,
+    importante: b.nivel_importancia >= 6,
+    urgencia_manual: null,
+    nivel_importancia: b.nivel_importancia,
+    nivel_urgencia: b.nivel_urgencia,
     estado: c.estado,
     motivo_espera: c.motivo_espera,
     motivo_espera_detalle: c.motivo_espera_detalle,
@@ -244,8 +232,6 @@ export function tareaProvisoria(
       : null,
     responsables: personas.filter((p) => ids.has(p.id)),
     subtareas: { total: conTitulo.length, hechas: 0 },
-    // De un proyecto, aparece sola si tiene entrega (decisión 11).
-    mostrar_en_matriz: !c.proyecto_id || c.fecha_entrega !== null || c.estado === 'en_proceso',
   }
 }
 
@@ -256,10 +242,6 @@ export function cuerpoEdicion(b: Borrador, original: DetalleTarea) {
   const cambios: Record<string, unknown> = {}
   for (const k of Object.keys(despues) as (keyof typeof despues)[]) {
     if (JSON.stringify(antes[k]) !== JSON.stringify(despues[k])) cambios[k] = despues[k]
-  }
-  // El interruptor de la matriz solo viaja si se tocó (si no, decide la regla automática).
-  if (b.proyecto_id && b.mostrar_en_matriz !== original.tarea.mostrar_en_matriz) {
-    cambios.mostrar_en_matriz = b.mostrar_en_matriz
   }
   // El servidor exige el motivo cuando se pasa a "en espera".
   if ('motivo_espera' in cambios || 'estado' in cambios) {
@@ -281,19 +263,4 @@ export function cuerpoEdicion(b: Borrador, original: DetalleTarea) {
     cuerpo.cliente = clienteDespues
   }
   return Object.keys(cuerpo).length > 0 ? cuerpo : null
-}
-
-/** El borrador listo para guardar, con la urgencia elegida ya resuelta. */
-export function conUrgenciaElegida(b: Borrador, ahora: Date, umbrales?: Umbrales): Borrador {
-  if (b.urgente === null) return b
-  const entrega = aIso(b.entrega)
-  return {
-    ...b,
-    urgencia_manual: urgenciaElegida(
-      b.urgente,
-      entrega ? new Date(entrega) : null,
-      ahora,
-      umbrales,
-    ),
-  }
 }

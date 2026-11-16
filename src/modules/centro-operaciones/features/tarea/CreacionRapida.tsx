@@ -1,15 +1,11 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId, useState } from 'react'
-import { aIso } from '../../lib/fechas'
 import { nuevoId } from '../../lib/ids'
 import { useConectado } from '../../lib/tiempoReal'
-import { esUrgente, urgenciaEstimada } from '../../lib/urgencia'
-import { useMatriz } from '../matriz/datos'
 import type { TareaMatriz } from '../matriz/tipos'
 import { AvisoSinConexion } from './AvisoSinConexion'
 import {
   borradorVacio,
-  conUrgenciaElegida,
   cuerpoNuevaTarea,
   tareaProvisoria,
   validar,
@@ -17,12 +13,11 @@ import {
   type Errores,
   type SubtareaNueva,
 } from './borrador'
-import { Campo, CampoFechaHora, ElegirResponsables, ElegirUrgente, SiNo } from './controles'
+import { Campo, CampoFechaHora, ElegirResponsables, SlidersPrioridad } from './controles'
 import { useCatalogos } from './datos'
 import { Dialogo } from './Dialogo'
 import { SelectorCategoria } from './SelectorCategoria'
 import { SelectorPedido } from './SelectorPedido'
-import { SelectorProyecto } from './SelectorProyecto'
 
 /** Lo cargado en el formulario (para reabrirlo si el servidor rechaza el alta). */
 export interface EstadoCreacion {
@@ -45,33 +40,24 @@ interface Props {
   /** Al reabrir después de un rechazo: lo que se había cargado y el motivo. */
   inicial?: EstadoCreacion
   error?: string
-  /** Creada desde un proyecto: ya viene con ese proyecto elegido. */
-  proyectoId?: string
 }
 
 /** Tarea nueva desde "+": siempre interna (los pedidos se cargan con la OT). */
-const tareaVacia = (proyectoId = ''): Borrador => ({
-  ...borradorVacio(),
-  tipo: 'interna',
-  proyecto_id: proyectoId,
-})
+const tareaVacia = (): Borrador => ({ ...borradorVacio(), tipo: 'interna' })
 
 /**
  * Tarea interna ("+", especificación 7.5): lo esencial en un paso (título,
- * responsables, entrega, importante y urgente), su categoría y, si es para
+ * responsables, entrega, importancia y urgencia de 0 a 10), su categoría y, si es para
  * un pedido, la orden de trabajo ya cargada. El resto, en "Más datos".
  */
-export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, proyectoId }: Props) {
+export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error }: Props) {
   const idForm = useId()
   const catalogos = useCatalogos()
-  const umbrales = useMatriz().data?.config.umbrales
   const conectado = useConectado()
-  const [vacia] = useState(() => tareaVacia(proyectoId))
+  const [vacia] = useState(tareaVacia)
   const [b, setB] = useState<Borrador>(() => inicial?.b ?? vacia)
   const [subtareas, setSubtareas] = useState<SubtareaNueva[]>(() => inicial?.subtareas ?? [])
-  const [mas, setMas] = useState(
-    () => (inicial?.subtareas.length ?? 0) > 0 || Boolean(inicial?.b.proyecto_id || proyectoId),
-  )
+  const [mas, setMas] = useState(() => (inicial?.subtareas.length ?? 0) > 0)
   const [errores, setErrores] = useState<Errores>({})
 
   const cambiar = <K extends keyof Borrador>(k: K, v: Borrador[K]) => {
@@ -81,10 +67,6 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, pro
 
   const personas = catalogos.data?.personas ?? []
   const sinGuardar = JSON.stringify(b) !== JSON.stringify(vacia) || subtareas.length > 0
-  const entregaIso = aIso(b.entrega)
-  const urgenteSegunFecha = esUrgente(
-    urgenciaEstimada(entregaIso ? new Date(entregaIso) : null, ahora, umbrales),
-  )
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,7 +78,7 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, pro
       if (err.inicio) setMas(true)
       return
     }
-    const listo = conUrgenciaElegida(b, ahora, umbrales)
+    const listo = b
     const id = nuevoId()
     onGuardar(
       {
@@ -158,18 +140,11 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, pro
           error={errores.entrega}
         />
 
-        <div className="co-fila co-fila--campos">
-          <SiNo
-            valor={b.importante}
-            onCambiar={(v) => cambiar('importante', v)}
-            error={errores.importante}
-          />
-          <ElegirUrgente
-            valor={b.urgente}
-            onCambiar={(v) => cambiar('urgente', v)}
-            urgenteSegunFecha={urgenteSegunFecha}
-          />
-        </div>
+        <SlidersPrioridad
+          importancia={b.nivel_importancia}
+          urgencia={b.nivel_urgencia}
+          onCambiar={(c) => setB((x) => ({ ...x, ...c }))}
+        />
 
         <div className="co-fila co-fila--campos">
           <SelectorCategoria
@@ -193,8 +168,6 @@ export function CreacionRapida({ ahora, onCerrar, onGuardar, inicial, error, pro
 
         {mas && (
           <div className="co-formulario co-formulario--anidado">
-            <SelectorProyecto valor={b.proyecto_id} onCambiar={(v) => cambiar('proyecto_id', v)} />
-
             <Campo etiqueta="Descripción">
               {({ id }) => (
                 <textarea

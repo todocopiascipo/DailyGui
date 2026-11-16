@@ -9,6 +9,8 @@ const tarea = (titulo: string, datos: Partial<TareaMia> = {}): TareaMia => ({
   titulo,
   importante: true,
   urgencia_manual: null,
+  nivel_importancia: 8,
+  nivel_urgencia: 6,
   estado: 'pendiente',
   estado_anterior: null,
   motivo_espera: null,

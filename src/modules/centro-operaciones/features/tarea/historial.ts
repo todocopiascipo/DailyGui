@@ -29,6 +29,8 @@ const CAMPOS: Record<string, string> = {
   saldo: 'saldo',
   importante: 'importancia',
   urgencia_manual: 'urgencia',
+  nivel_importancia: 'importancia',
+  nivel_urgencia: 'urgencia',
   motivo_espera: 'motivo de espera',
   motivo_espera_detalle: 'motivo de espera',
   fecha_inicio: 'hora de inicio',

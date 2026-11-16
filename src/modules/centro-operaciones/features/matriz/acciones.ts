@@ -12,8 +12,8 @@ import type { TareaMatriz } from './tipos'
 
 export interface Movida {
   id: string
-  importante: boolean
-  urgencia_manual: number
+  nivel_importancia: number
+  nivel_urgencia: number
 }
 
 export type CambioEstado = 'terminar' | 'entregar' | 'devolver'
@@ -46,12 +46,12 @@ export function useMoverTarea() {
   const recargar = useRecargar()
   return useMutation({
     mutationKey: CLAVE_MOVER,
-    mutationFn: ({ id, importante, urgencia_manual }: Movida) =>
+    mutationFn: ({ id, nivel_importancia, nivel_urgencia }: Movida) =>
       pedir(`/tareas/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         // Queda en el historial como "movida de cuadrante".
         headers: { 'x-co-accion': 'movida_cuadrante' },
-        body: JSON.stringify({ cambios: { importante, urgencia_manual } }),
+        body: JSON.stringify({ cambios: { nivel_importancia, nivel_urgencia } }),
       }),
     onSuccess: (_r, { id }) => recargar(id),
   })
@@ -109,7 +109,13 @@ export function useCambiosEnCurso(): (tareas: TareaMatriz[]) => TareaMatriz[] {
         const terminada = estados.some((e) => e.id === t.id && e.cambio === 'terminar')
         return {
           ...t,
-          ...(m ? { importante: m.importante, urgencia_manual: m.urgencia_manual } : {}),
+          ...(m
+            ? {
+                nivel_importancia: m.nivel_importancia,
+                nivel_urgencia: m.nivel_urgencia,
+                importante: m.nivel_importancia >= 6,
+              }
+            : {}),
           ...(terminada ? { estado: 'terminada' as const, estado_anterior: t.estado } : {}),
         }
       })

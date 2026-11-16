@@ -355,6 +355,8 @@ export type Database = {
           titulo: string
           updated_at: string
           urgencia_manual: number | null
+          nivel_importancia: number
+          nivel_urgencia: number
         }
         Insert: {
           actualizada_por?: string | null
@@ -387,6 +389,8 @@ export type Database = {
           titulo: string
           updated_at?: string
           urgencia_manual?: number | null
+          nivel_importancia?: number
+          nivel_urgencia?: number
         }
         Update: {
           actualizada_por?: string | null
@@ -419,6 +423,8 @@ export type Database = {
           titulo?: string
           updated_at?: string
           urgencia_manual?: number | null
+          nivel_importancia?: number
+          nivel_urgencia?: number
         }
         Relationships: [
           {

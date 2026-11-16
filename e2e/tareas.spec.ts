@@ -37,14 +37,13 @@ test('crear una tarea con la tecla N en menos de 15 segundos', async ({ page }) 
     'true',
   )
   await dialogo.getByRole('button', { name: 'Hoy' }).click()
-  await dialogo
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'Sí' })
-    .click()
+  await dialogo.getByLabel(/^Importancia/).fill('8')
+  await dialogo.getByLabel(/^Urgencia/).fill('7')
+  await expect(dialogo.getByText('Va a: Importante y urgente')).toBeVisible()
   await dialogo.getByRole('button', { name: 'Crear tarea' }).click()
 
   await expect(dialogo).toHaveCount(0)
-  // Entrega hoy + importante → urgente e importante.
+  // Importancia 8 y urgencia 7 → importante y urgente.
   await expect(cuadrante(page, 'hacer').getByText(titulo)).toBeVisible()
   await expect(globo(page, titulo)).toContainText(persona)
   expect(Date.now() - inicio).toBeLessThan(15_000)
@@ -55,42 +54,48 @@ test('el formulario avisa lo que falta', async ({ page }) => {
   const dialogo = page.getByRole('dialog', { name: 'Nueva tarea' })
   await dialogo.getByRole('button', { name: 'Crear tarea' }).click()
   await expect(dialogo.getByText('Escribí un título')).toBeVisible()
-  await expect(dialogo.getByText('Elegí si es importante')).toBeVisible()
   // Sin cambios, Esc cierra directo.
   await dialogo.getByLabel('Título').fill('')
   await page.keyboard.press('Escape')
   await expect(dialogo).toHaveCount(0)
 })
 
-test('editar en el detalle: importancia, urgencia, cliente y seña', async ({ page }) => {
+test('editar en el detalle: importancia y urgencia con sliders', async ({ page }) => {
   const titulo = unico('Folletos')
-  await crearPorApi(page, { titulo, importante: false })
+  await crearPorApi(page, { titulo, nivel_importancia: 3, nivel_urgencia: 2 })
   await page.reload()
   await expect(cuadrante(page, 'eliminar').getByText(titulo)).toBeVisible()
 
   await page.getByRole('button', { name: `Abrir ${titulo}` }).click()
   const panel = page.getByRole('dialog', { name: titulo })
-  await expect(panel.getByText('Urgencia estimada: 1')).toBeVisible()
-  await panel.getByRole('radio', { name: 'Sí' }).click()
-  await panel.getByRole('slider').fill('4')
-  await panel.getByLabel('Cliente (nombre y apellido)').fill('Cliente de prueba')
-  await panel.getByLabel('Teléfono').fill('2990000000')
-  await panel.getByLabel('Seña', { exact: true }).fill('1.500')
+  await expect(panel.getByLabel(/^Importancia/)).toHaveValue('3')
+  await panel.getByLabel(/^Importancia/).fill('9')
+  await panel.getByLabel(/^Urgencia/).fill('8')
   await panel.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(panel.getByText('Cambios guardados')).toBeVisible()
   await expect(panel.getByText(/Editó/).first()).toBeVisible()
   await panel.getByRole('button', { name: 'Cerrar' }).click()
 
-  // Importante + urgencia manual 4 → urgente e importante.
+  // Importancia 9 y urgencia 8 → importante y urgente, con aspecto "alta".
   await expect(cuadrante(page, 'hacer').getByText(titulo)).toBeVisible()
   await expect(globo(page, titulo)).toHaveAttribute('data-aspecto', 'alta')
 
   // Lo guardado se ve al volver a abrir.
   await page.reload()
   await page.getByRole('button', { name: `Abrir ${titulo}` }).click()
-  await expect(panel.getByLabel('Cliente (nombre y apellido)')).toHaveValue('Cliente de prueba')
-  await expect(panel.getByLabel('Seña', { exact: true })).toHaveValue('1500')
-  await expect(panel.getByText('Urgencia: 4 (manual)')).toBeVisible()
+  await expect(panel.getByLabel(/^Urgencia/)).toHaveValue('8')
+})
+
+test('dentro del cuadrante, primero la mayor suma de importancia y urgencia', async ({ page }) => {
+  const baja = unico('Suma baja')
+  const alta = unico('Suma alta')
+  await crearPorApi(page, { titulo: baja, nivel_importancia: 6, nivel_urgencia: 6 })
+  await crearPorApi(page, { titulo: alta, nivel_importancia: 10, nivel_urgencia: 9 })
+  await page.reload()
+  const titulos = await cuadrante(page, 'hacer')
+    .getByRole('heading', { level: 3 })
+    .allTextContents()
+  expect(titulos.indexOf(alta)).toBeLessThan(titulos.indexOf(baja))
 })
 
 test('subtareas: agregar y marcar hecha', async ({ page }) => {
@@ -123,7 +128,8 @@ test('tarea interna relacionada con una OT: se ve el pedido y se abre desde el d
   })
   expect(r.status()).toBe(201)
   await page.reload()
-  await expect(page.getByTestId('co-globo').filter({ hasText: pedido })).toBeVisible()
+  // Las OT ya no están en la matriz (Fase 12).
+  await expect(page.getByTestId('co-globo').filter({ hasText: pedido })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Crear tarea' }).click()
   const alta = page.getByRole('dialog', { name: 'Nueva tarea' })
@@ -131,12 +137,9 @@ test('tarea interna relacionada con una OT: se ve el pedido y se abre desde el d
   await expect(alta.getByLabel('Cliente (nombre y apellido)')).toHaveCount(0)
   await alta.getByLabel('Título').fill(titulo)
   await alta.getByLabel('Pedido relacionado').selectOption({ label: `${pedido} · Cliente OT` })
-  await alta
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'No' })
-    .click()
-  // Urgente "Sí": va a la columna de urgentes aunque no tenga fecha.
-  await alta.getByRole('radiogroup', { name: 'Urgente' }).getByRole('radio', { name: 'Sí' }).click()
+  await alta.getByLabel(/^Importancia/).fill('3')
+  // Urgencia 8: va a los urgentes aunque no tenga fecha.
+  await alta.getByLabel(/^Urgencia/).fill('8')
   await alta.getByRole('button', { name: 'Crear tarea' }).click()
 
   const globo = page.getByTestId('co-globo').filter({ hasText: titulo })
@@ -162,5 +165,7 @@ test('OT: las fechas de inicio y límite van al final', async ({ page }) => {
   expect(await y('Fecha inicio: día')).toBeLessThan(await y('Fecha límite: día'))
   // El detalle es lo primero: arranca con el foco ahí.
   await expect(ot.getByLabel('Detalle')).toBeFocused()
-  await expect(ot.getByRole('radiogroup', { name: 'Urgente' })).toBeVisible()
+  // Las OT no tienen importancia ni urgencia (Fase 12).
+  await expect(ot.getByLabel(/^Importancia/)).toHaveCount(0)
+  await expect(ot.getByLabel(/^Urgencia/)).toHaveCount(0)
 })

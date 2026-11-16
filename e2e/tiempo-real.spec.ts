@@ -24,16 +24,19 @@ test('dos navegadores se sincronizan en menos de 1 segundo', async ({ browser })
   await pa.keyboard.press('n')
   await pa.getByLabel('Título').fill(titulo)
   await pa
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'Sí' })
-    .click()
+    .getByRole('dialog')
+    .getByLabel(/^Importancia/)
+    .fill('8')
   await pa.getByRole('dialog').getByRole('button', { name: 'Crear tarea' }).click()
   await expect(globo(pb, titulo)).toBeVisible({ timeout: 1_000 })
 
   // Edición en B → se mueve de cuadrante en A.
   await expect(cuadrante(pa, 'planificar').getByText(titulo)).toBeVisible()
   await pb.getByRole('button', { name: `Abrir ${titulo}` }).click()
-  await pb.getByRole('slider').fill('5')
+  await pb
+    .getByRole('dialog')
+    .getByLabel(/^Urgencia/)
+    .fill('9')
   await pb.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(cuadrante(pa, 'hacer').getByText(titulo)).toBeVisible({ timeout: 1_000 })
 
@@ -83,10 +86,6 @@ test('alta optimista: se ve al instante y, si el servidor la rechaza, vuelve atr
   const titulo = unico('Optimista')
   await page.keyboard.press('n')
   await page.getByLabel('Título').fill(titulo)
-  await page
-    .getByRole('radiogroup', { name: 'Importante' })
-    .getByRole('radio', { name: 'No' })
-    .click()
   await page.getByRole('dialog').getByRole('button', { name: 'Crear tarea' }).click()
 
   // Al instante: la tarea en su cuadrante, marcada como "guardando".

@@ -1,5 +1,5 @@
-import { useMatriz } from '../matriz/datos'
 import { Campo } from './controles'
+import { usePedidos } from './datos'
 
 /**
  * "Pedido relacionado" de una tarea interna: una orden de trabajo ya cargada
@@ -15,9 +15,9 @@ export function SelectorPedido({
   /** El pedido ya enlazado, aunque ya no esté en la matriz (por ej., entregado). */
   actual?: { id: string; titulo: string } | null
 }) {
-  const pedidos = (useMatriz().data?.tareas ?? [])
-    .filter((t) => t.tipo === 'pedido' && !t.provisoria)
-    .sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'))
+  const pedidos = [...(usePedidos().data ?? [])].sort((a, b) =>
+    a.titulo.localeCompare(b.titulo, 'es'),
+  )
   const falta = actual && !pedidos.some((p) => p.id === actual.id)
   return (
     <Campo etiqueta="Pedido relacionado">
